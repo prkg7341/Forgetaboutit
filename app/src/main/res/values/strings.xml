@@ -13,4 +13,5 @@
     <string name="second_page">second page</string>
     <string name="frag">frag</string>
     <string name="bt">Button</string>
+    <string name="get_api_information">get API information</string>
 </resources>

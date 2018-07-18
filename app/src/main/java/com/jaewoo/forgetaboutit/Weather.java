@@ -106,7 +106,7 @@ public class Weather extends Fragment {
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             dataView.setText(s);
-            timeView.setText("data was updated at " + dateTime);
+            timeView.setText("Updated time is " + dateTime);
         }
     }
 }
