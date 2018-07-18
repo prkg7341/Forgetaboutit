@@ -29,21 +29,20 @@ public class Weather extends Fragment {
         Button renew = (Button) view.findViewById(R.id.renewWeather);
         final TextView weatherView = (TextView) view.findViewById(R.id.weatherView);
 
-        RunningAsyncTask rat = new RunningAsyncTask(view);
-        rat.execute();
+        final RunningAsyncTask rat = new RunningAsyncTask(view);
 
         renew.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                weatherView.setText("Success");
+                //weatherView.setText("Success");
+                rat.execute(view);
             }
         });
-
 
         return view;
     }
 
-    class RunningAsyncTask extends AsyncTask<String, String, String> {//동네예보
+    class RunningAsyncTask extends AsyncTask<View, String, String> {//동네예보
 
         RunningAsyncTask(View view) {
 
@@ -57,11 +56,14 @@ public class Weather extends Fragment {
         private StringBuilder sb = new StringBuilder();
         private String line;
         private String date = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        TextView textView;
 
         @Override
-        protected String doInBackground(String... strings) {
+        protected String doInBackground(View... views) {
 
             getWeatherInfo();
+
+            textView = (TextView) views[0].findViewById(R.id.weatherView);
 
             return sb.toString();
         }
@@ -101,47 +103,9 @@ public class Weather extends Fragment {
             }
         }
 
-        private void getWaterInfo() {
-
-            urlBuilder = new StringBuilder("http://apis.data.go.kr/B500001/rwis/waterQuality/list"); //URL
-            try {
-                Date dt = new Date();
-                urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=" + key); //Service Key
-                urlBuilder.append("&" + URLEncoder.encode("stDt", "UTF-8") + "=" + URLEncoder.encode(dt.toString(), "UTF-8")); //조회시작일자
-                urlBuilder.append("&" + URLEncoder.encode("stTm", "UTF-8") + "=" + URLEncoder.encode("08", "UTF-8")); //조회시작시간
-                urlBuilder.append("&" + URLEncoder.encode("edDt", "UTF-8") + "=" + URLEncoder.encode("2017-07-04", "UTF-8")); //조회종료일자
-                urlBuilder.append("&" + URLEncoder.encode("edTm", "UTF-8") + "=" + URLEncoder.encode("09", "UTF-8")); //조회종료시간
-                urlBuilder.append("&" + URLEncoder.encode("fcltyMngNo", "UTF-8") + "=" + URLEncoder.encode("4824012333", "UTF-8")); //시설관리번호
-                urlBuilder.append("&" + URLEncoder.encode("sujCode", "UTF-8") + "=" + URLEncoder.encode("333", "UTF-8")); //사업장코드
-                urlBuilder.append("&" + URLEncoder.encode("liIndDiv", "UTF-8") + "=" + URLEncoder.encode("1", "UTF-8")); //생활:1, 공업:2
-                urlBuilder.append("&" + URLEncoder.encode("numOfRows", "UTF-8") + "=" + URLEncoder.encode("10", "UTF-8")); //줄수
-                urlBuilder.append("&" + URLEncoder.encode("pageNo", "UTF-8") + "=" + URLEncoder.encode("1", "UTF-8")); //페이지번호
-                url = new URL(urlBuilder.toString());
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Content-type", "application/json");
-                System.out.println("Response code: " + conn.getResponseCode());
-                if (conn.getResponseCode() >= 200 && conn.getResponseCode() <= 300) {
-                    rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                } else {
-                    rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-                }
-                while ((line = rd.readLine()) != null) {
-                    sb.append(line + "\n");
-                }
-                rd.close();
-                conn.disconnect();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-        }
-
-        protected void onPostExecute(String s, TextView textview) {
+        protected void onPostExecute(String s) {
             super.onPostExecute(s);
-            textview.setText(s);
+            textView.setText(s);
         }
     }
 }
