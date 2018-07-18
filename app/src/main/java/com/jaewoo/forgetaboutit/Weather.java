@@ -27,15 +27,12 @@ public class Weather extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.weather, container, false);
         Button renew = (Button) view.findViewById(R.id.renewWeather);
-        final TextView weatherView = (TextView) view.findViewById(R.id.weatherView);
-
-        final RunningAsyncTask rat = new RunningAsyncTask(view);
 
         renew.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 //weatherView.setText("Success");
-                rat.execute(view);
+                new RunningAsyncTask().execute(view);
             }
         });
 
@@ -44,7 +41,7 @@ public class Weather extends Fragment {
 
     class RunningAsyncTask extends AsyncTask<View, String, String> {//동네예보
 
-        RunningAsyncTask(View view) {
+        RunningAsyncTask() {
 
         }
 
@@ -56,14 +53,17 @@ public class Weather extends Fragment {
         private StringBuilder sb = new StringBuilder();
         private String line;
         private String date = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        TextView textView;
+        private String dateTime = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss:SSS").format(new Date());
+        TextView dataView;
+        TextView timeView;
 
         @Override
         protected String doInBackground(View... views) {
 
             getWeatherInfo();
 
-            textView = (TextView) views[0].findViewById(R.id.weatherView);
+            dataView = (TextView) views[0].findViewById(R.id.weatherView);
+            timeView = (TextView) views[0].findViewById(R.id.timeView);
 
             return sb.toString();
         }
@@ -105,7 +105,8 @@ public class Weather extends Fragment {
 
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
-            textView.setText(s);
+            dataView.setText(s);
+            timeView.setText("data was updated at " + dateTime);
         }
     }
 }
