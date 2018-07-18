@@ -11,4 +11,6 @@
     <string name="success">success</string>
     <string name="button">button</string>
     <string name="second_page">second page</string>
+    <string name="frag">frag</string>
+    <string name="bt">Button</string>
 </resources>
