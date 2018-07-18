@@ -33,7 +33,7 @@ public class Main extends Fragment {
         renew.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                weather.setText("renew Success");
+                weather.setText("The button works well!");
             }
         });
         return view;
