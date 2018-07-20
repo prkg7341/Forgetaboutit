@@ -1,5 +1,7 @@
 package com.jaewoo.forgetaboutit;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -8,6 +10,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,14 +32,48 @@ public class Weather extends Fragment {
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+
         final View view = inflater.inflate(R.layout.weather, container, false);
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                getActivity());
+
+        // 제목셋팅-생략가능
+        alertDialogBuilder.setTitle("Title");
+
+        // AlertDialog 셋팅
+        alertDialogBuilder
+                .setMessage("renew?")//생략가능
+                .setCancelable(true)
+                .setPositiveButton("renew",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(
+                                    DialogInterface dialog, int id) {
+                                new RunningAsyncTask().execute(view);
+
+                            }
+                        }
+                )
+                .setNegativeButton("cancle",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(
+                                    DialogInterface dialog, int id) {
+                                        // 다이얼로그를 취소한다
+                                        dialog.cancel();
+                                        Toast.makeText(getActivity(), "Update cancelled", Toast.LENGTH_SHORT).show();
+                                    }
+                        }
+                );
+
+        // 다이얼로그 생성
+        final AlertDialog alertDialog = alertDialogBuilder.create();
+
         Button renew = (Button) view.findViewById(R.id.renewWeather);
 
         renew.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //weatherView.setText("Success");
-                new RunningAsyncTask().execute(view);
+                // 다이얼로그 보여주기
+                alertDialog.show();
             }
         });
 
@@ -60,10 +101,97 @@ public class Weather extends Fragment {
         @Override
         protected String doInBackground(View... views) {
 
-            getWeatherInfo();
-
             dataView = (TextView) views[0].findViewById(R.id.weatherView);
             timeView = (TextView) views[0].findViewById(R.id.timeView);
+
+            boolean bbaseDate, bbaseTime, bcategory, bfcstDate, bfcstTime, bfcstValue, bnx, bny;
+            bbaseDate = false; bbaseTime = false; bcategory = false; bfcstDate = false;
+            bfcstTime = false; bfcstValue = false; bnx = false; bny = false;
+            String baseDate, baseTime, category, fcstDate, fcstTime, fcstValue, nx, ny;
+            baseDate = null; baseTime = null; category = null; fcstDate = null;
+            fcstTime = null; fcstValue = null; nx = null; ny = null;
+
+            getWeatherInfo();
+
+            XmlPullParser parser;
+            int parserEvent = 0;
+
+            try {
+                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                parser = factory.newPullParser();
+                parserEvent = parser.getEventType();
+                factory.setNamespaceAware(true);
+
+                parser.setInput(url.openStream(), null);
+
+                while (parserEvent != XmlPullParser.END_DOCUMENT) {
+                    switch (parserEvent) {
+                        case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
+                            if (parser.getName().equals("baseDate")) { //baseDate(예측일자) 만나면 내용을 받을수 있게 하자
+                                bbaseDate = true;
+                            }
+                            if (parser.getName().equals("baseTime")) { //baseTime(예측시간) 만나면 내용을 받을수 있게 하자
+                                bbaseTime = true;
+                            }
+                            if (parser.getName().equals("category")) { //category(자료구분문자) 만나면 내용을 받을수 있게 하자
+                                bcategory = true;
+                            }
+                            if (parser.getName().equals("fcstDate")) { //fcstDate(예보일자) 만나면 내용을 받을수 있게 하자
+                                bfcstDate = true;
+                            }
+                            if (parser.getName().equals("fcstTime")) { //fcstTime(예보시간) 만나면 내용을 받을수 있게 하자
+                                bfcstTime = true;
+                            }
+                            if (parser.getName().equals("fcstValue")) { //fcstValue(예보 값) 만나면 내용을 받을수 있게 하자
+                                bfcstValue = true;
+                            }
+                            /*if (parser.getName().equals("message")) { //message 태그를 만나면 에러 출력
+                                status1.setText(status1.getText() + "에러");
+                                //여기에 에러코드에 따라 다른 메세지를 출력하도록 할 수 있다.
+                            }*/
+                            break;
+
+                        case XmlPullParser.TEXT://parser가 내용에 접근했을때
+                            if (bbaseDate) { //bbaseDate true일 때 태그의 내용을 저장.
+                                baseDate = parser.getText();
+                                bbaseDate = false;
+                            }
+                            if (bbaseTime) { //bbaseTime true일 때 태그의 내용을 저장.
+                                baseTime = parser.getText();
+                                bbaseTime = false;
+                            }
+                            if (bcategory) { //bcategory true일 때 태그의 내용을 저장.
+                                category = parser.getText();
+                                bcategory = false;
+                            }
+                            if (bfcstDate) { //bfcstDate true일 때 태그의 내용을 저장.
+                                fcstDate = parser.getText();
+                                bfcstDate = false;
+                            }
+                            if (bfcstTime) { //bfcstTime true일 때 태그의 내용을 저장.
+                                fcstTime = parser.getText();
+                                bfcstTime = false;
+                            }
+                            if (bfcstValue) { //bfcstValue true일 때 태그의 내용을 저장.
+                                fcstValue = parser.getText();
+                                bfcstValue = false;
+                            }
+                            break;
+                        case XmlPullParser.END_TAG:
+                            if (parser.getName().equals("item")) {
+                                sb.append(baseDate).append(" ").append(baseTime).append(" ").append(category).append(" ").append(fcstValue).append(" ").append(fcstDate).append(" ").append(fcstTime).append("\n");
+                            }
+                            break;
+                    }
+                    try {
+                        parserEvent = parser.next();
+                    } catch (XmlPullParserException | IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
+            }
 
             return sb.toString();
         }
@@ -75,8 +203,8 @@ public class Weather extends Fragment {
                 urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=" + key); //서비스 인증
                 urlBuilder.append("&" + URLEncoder.encode("base_date", "UTF-8") + "=" + URLEncoder.encode(date, "UTF-8")); //오늘 발표
                 urlBuilder.append("&" + URLEncoder.encode("base_time", "UTF-8") + "=" + URLEncoder.encode("0500", "UTF-8")); //05시 발표 * 기술문서 참조
-                urlBuilder.append("&" + URLEncoder.encode("nx", "UTF-8") + "=" + URLEncoder.encode("60", "UTF-8")); //예보지점의 X 좌표값
-                urlBuilder.append("&" + URLEncoder.encode("ny", "UTF-8") + "=" + URLEncoder.encode("127", "UTF-8")); //예보지점의 Y 좌표값
+                urlBuilder.append("&" + URLEncoder.encode("nx", "UTF-8") + "=" + URLEncoder.encode("58", "UTF-8")); //예보지점의 X 좌표값
+                urlBuilder.append("&" + URLEncoder.encode("ny", "UTF-8") + "=" + URLEncoder.encode("125", "UTF-8")); //예보지점의 Y 좌표값
                 urlBuilder.append("&" + URLEncoder.encode("numOfRows", "UTF-8") + "=" + URLEncoder.encode("999", "UTF-8")); //한 페이지 결과 수
                 //urlBuilder.append("&" + URLEncoder.encode("pageSize","UTF-8") + "=" + URLEncoder.encode("999", "UTF-8")); //페이지 사이즈
                 urlBuilder.append("&" + URLEncoder.encode("pageNo", "UTF-8") + "=" + URLEncoder.encode("1", "UTF-8")); //페이지 번호
@@ -86,15 +214,14 @@ public class Weather extends Fragment {
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Content-type", "application/json");
-                System.out.println("Response code: " + conn.getResponseCode());
                 if (conn.getResponseCode() >= 200 && conn.getResponseCode() <= 300) {
                     rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 } else {
                     rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
                 }
-                while ((line = rd.readLine()) != null) {
+                /*while ((line = rd.readLine()) != null) {
                     sb.append(line + "\n");
-                }
+                }*/
                 rd.close();
                 conn.disconnect();
 
@@ -107,6 +234,7 @@ public class Weather extends Fragment {
             super.onPostExecute(s);
             dataView.setText(s);
             timeView.setText("Updated time is " + dateTime);
+            Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
         }
     }
 }

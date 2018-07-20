@@ -14,11 +14,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
 
 public class MainActivity extends AppCompatActivity {
 
-    void createParser() throws XmlPullParserException {
-        XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-        XmlPullParser parser = factory.newPullParser();
-        factory.setNamespaceAware(true);
-    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
