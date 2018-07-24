@@ -92,7 +92,7 @@ public class Weather extends Fragment {
         private HttpURLConnection conn;
         private BufferedReader rd;
         private StringBuilder sb = new StringBuilder();
-        private String line;
+        //private String line;
         private String date = new SimpleDateFormat("yyyyMMdd").format(new Date());
         private String dateTime = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss:SSS").format(new Date());
         TextView dataView;
@@ -104,12 +104,12 @@ public class Weather extends Fragment {
             dataView = (TextView) views[0].findViewById(R.id.weatherView);
             timeView = (TextView) views[0].findViewById(R.id.timeView);
 
-            boolean bbaseDate, bbaseTime, bcategory, bfcstDate, bfcstTime, bfcstValue, bnx, bny;
+            boolean bbaseDate, bbaseTime, bcategory, bfcstDate, bfcstTime, bfcstValue;
             bbaseDate = false; bbaseTime = false; bcategory = false; bfcstDate = false;
-            bfcstTime = false; bfcstValue = false; bnx = false; bny = false;
-            String baseDate, baseTime, category, fcstDate, fcstTime, fcstValue, nx, ny;
+            bfcstTime = false; bfcstValue = false;
+            String baseDate, baseTime, category, fcstDate, fcstTime, fcstValue;
             baseDate = null; baseTime = null; category = null; fcstDate = null;
-            fcstTime = null; fcstValue = null; nx = null; ny = null;
+            fcstTime = null; fcstValue = null;
 
             getWeatherInfo();
 
@@ -179,7 +179,8 @@ public class Weather extends Fragment {
                             break;
                         case XmlPullParser.END_TAG:
                             if (parser.getName().equals("item")) {
-                                sb.append(baseDate).append(" ").append(baseTime).append(" ").append(category).append(" ").append(fcstValue).append(" ").append(fcstDate).append(" ").append(fcstTime).append("\n");
+                                sb.append(baseDate).append(" ").append(baseTime).append(" ").append(category).append(" ")
+                                        .append(fcstValue).append(" ").append(fcstDate).append(" ").append(fcstTime).append("\n");
                             }
                             break;
                     }
