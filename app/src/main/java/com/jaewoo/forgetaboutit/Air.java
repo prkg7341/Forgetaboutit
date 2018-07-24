@@ -18,18 +18,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import static android.support.constraint.Constraints.TAG;
 
 public class Air extends Fragment {
 
-
-
     public Air() {
 
     }
 
-    Location location = null;
     TextView textView;
     Button button;
     double latitude;
@@ -64,7 +62,6 @@ public class Air extends Fragment {
                 else{
                     //위치정보 요청 후
                     locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
-
                     // GPS 프로바이더 사용가능여부
                     isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                     // 네트워크 프로바이더 사용가능여부
@@ -73,44 +70,49 @@ public class Air extends Fragment {
                     Log.d(TAG, "isGPSEnabled="+ isGPSEnabled);
                     Log.d(TAG, "isNetworkEnabled="+ isNetworkEnabled);
 
-                    locationListener = new LocationListener() {
+                    if((isGPSEnabled|isNetworkEnabled)==false){
+                        Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_SHORT).show();
+                    }
+                    else {
+                        locationListener = new LocationListener() {
 
-                        public void onLocationChanged(Location location) {
-                            longitude = location.getLongitude(); //경도
-                            latitude = location.getLatitude(); //위도
-                            textView.setText("위도: "+latitude + "\n경도: " + longitude);
-                        }
+                            public void onLocationChanged(Location location) {
+                                longitude = location.getLongitude(); //경도
+                                latitude = location.getLatitude(); //위도
+                                textView.setText("위도: " + latitude + "\n경도: " + longitude);
+                            }
 
-                        @Override
-                        public void onStatusChanged(String s, int i, Bundle bundle) {
+                            @Override
+                            public void onStatusChanged(String s, int i, Bundle bundle) {
 
-                        }
+                            }
 
-                        @Override
-                        public void onProviderEnabled(String s) {
+                            @Override
+                            public void onProviderEnabled(String s) {
 
-                        }
+                            }
 
-                        @Override
-                        public void onProviderDisabled(String s) {
+                            @Override
+                            public void onProviderDisabled(String s) {
 
-                        }
-                    };
+                            }
+                        };
 
-                    // Register the listener with the Location Manager to receive location updates
-                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-                    Log.d(TAG, "NP 됨");
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                    Log.d(TAG, "GP 됨");
+                        // Register the listener with the Location Manager to receive location updates
+                        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+                        Log.d(TAG, "NP 됨");
+                        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                        Log.d(TAG, "GP 됨");
 
-                    /*// 수동으로 위치 구하기
-                    String locationProvider = LocationManager.GPS_PROVIDER;
-                    Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
-                    if (lastKnownLocation != null) {
-                        double lng = lastKnownLocation.getLatitude();
-                        double lat = lastKnownLocation.getLatitude();
-                        Log.d(TAG, "longtitude=" + lng + ", latitude=" + lat);
-                    }*/
+                        /*// 수동으로 위치 구하기
+                        String locationProvider = LocationManager.GPS_PROVIDER;
+                        Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+                        if (lastKnownLocation != null) {
+                            double lng = lastKnownLocation.getLatitude();
+                            double lat = lastKnownLocation.getLatitude();
+                            Log.d(TAG, "longtitude=" + lng + ", latitude=" + lat);
+                        }*/
+                    }
                 }
             }
         });
