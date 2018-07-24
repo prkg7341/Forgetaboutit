@@ -16,7 +16,7 @@ public class Main extends Fragment {
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
-            final View view = inflater.inflate(R.layout.main, container, false);
+        final View view = inflater.inflate(R.layout.main, container, false);
         Button renew = (Button) view.findViewById(R.id.renew);
         final TextView test = (TextView) view.findViewById(R.id.weather);
 

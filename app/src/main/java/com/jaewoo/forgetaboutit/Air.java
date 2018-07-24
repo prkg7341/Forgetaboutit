@@ -6,90 +6,126 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
-public class Air extends Fragment{
+import static android.support.constraint.Constraints.TAG;
 
-    public Air(){
+public class Air extends Fragment {
+
+
+
+    public Air() {
 
     }
 
     Location location = null;
     TextView textView;
+    Button button;
     double latitude;
     double longitude;
+    LocationListener locationListener;
+    LocationManager locationManager;
+    private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 1;
+    private boolean isGPSEnabled;
+    private boolean isNetworkEnabled;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         final View view = inflater.inflate(R.layout.air, container, false);
 
-        int permissionCheck = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION);
-        int permissionCheck2 = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION);
+        textView = (TextView) view.findViewById(R.id.airView);
+        button = (Button) view.findViewById(R.id.button);
 
-        LocationManager locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
-        locationManager.removeUpdates( locationListener );    // Stop the update if it is in progress.
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(ContextCompat.checkSelfPermission (getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                        && ContextCompat.checkSelfPermission (getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){//권한이 허용되어있으면
+                    if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)){
+                        ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+                        Log.d(TAG, "권한 없음1");
+                    }
+                    else{
+                        ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+                        Log.d(TAG, "권한 없음2");
+                    }
+                }
+                else{
+                    //위치정보 요청 후
+                    locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
 
+                    // GPS 프로바이더 사용가능여부
+                    isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                    // 네트워크 프로바이더 사용가능여부
+                    isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-        if(permissionCheck == PackageManager.PERMISSION_DENIED && permissionCheck2==PackageManager.PERMISSION_DENIED){
-            // 권한 없음
-             return view;
-        }else {
+                    Log.d(TAG, "isGPSEnabled="+ isGPSEnabled);
+                    Log.d(TAG, "isNetworkEnabled="+ isNetworkEnabled);
 
-            textView = (TextView) view.findViewById(R.id.airView);
-            locationManager.requestLocationUpdates( LocationManager.NETWORK_PROVIDER , 0, 0, locationListener );
-            textView.setText(latitude + " " + longitude);
-        }
+                    locationListener = new LocationListener() {
+
+                        public void onLocationChanged(Location location) {
+                            longitude = location.getLongitude(); //경도
+                            latitude = location.getLatitude(); //위도
+                            textView.setText("위도: "+latitude + "\n경도: " + longitude);
+                        }
+
+                        @Override
+                        public void onStatusChanged(String s, int i, Bundle bundle) {
+
+                        }
+
+                        @Override
+                        public void onProviderEnabled(String s) {
+
+                        }
+
+                        @Override
+                        public void onProviderDisabled(String s) {
+
+                        }
+                    };
+
+                    // Register the listener with the Location Manager to receive location updates
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+                    Log.d(TAG, "NP 됨");
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                    Log.d(TAG, "GP 됨");
+
+                    /*// 수동으로 위치 구하기
+                    String locationProvider = LocationManager.GPS_PROVIDER;
+                    Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+                    if (lastKnownLocation != null) {
+                        double lng = lastKnownLocation.getLatitude();
+                        double lat = lastKnownLocation.getLatitude();
+                        Log.d(TAG, "longtitude=" + lng + ", latitude=" + lat);
+                    }*/
+                }
+            }
+        });
 
         return view;
     }
 
-    LocationListener locationListener = new LocationListener() {
-
-        @Override
-        public void onLocationChanged(Location location) {
-
-            LocationManager locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
-
-            int permissionCheck = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION);
-            int permissionCheck2 = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION);
-
-            if(permissionCheck == PackageManager.PERMISSION_DENIED && permissionCheck2==PackageManager.PERMISSION_DENIED){
-                // 권한 없음
-                return;
-            }else {
-                // 권한 있음
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                    latitude = location.getLatitude();
-                    longitude = location.getLongitude();
-                } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-                    latitude = location.getLatitude();
-                    longitude = location.getLongitude();
-                } else {
-                    return;
-                }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (Build.VERSION.SDK_INT >= 23) {
+            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
+                //resume tasks needing this permission
             }
         }
-
-        @Override
-        public void onProviderDisabled(String provider) {
-        }
-
-        @Override
-        public void onProviderEnabled(String provider) {
-        }
-
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {
-        }
-
-    };
-
+    }
 }
