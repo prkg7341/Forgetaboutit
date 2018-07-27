@@ -3,6 +3,8 @@ package com.jaewoo.forgetaboutit;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -20,6 +22,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
 import static android.support.constraint.Constraints.TAG;
 
 public class Air extends Fragment {
@@ -27,6 +33,8 @@ public class Air extends Fragment {
     public Air() {
 
     }
+
+
 
     TextView textView;
     Button button;
@@ -79,7 +87,8 @@ public class Air extends Fragment {
                             public void onLocationChanged(Location location) {
                                 longitude = location.getLongitude(); //경도
                                 latitude = location.getLatitude(); //위도
-                                textView.setText("위도: " + latitude + "\n경도: " + longitude);
+                                textView.setText("위도: " + latitude + "\n경도: " + longitude+"\n"
+                                        +getAddressFromLocation(location, Locale.KOREA));
                             }
 
                             @Override
@@ -100,9 +109,7 @@ public class Air extends Fragment {
 
                         // Register the listener with the Location Manager to receive location updates
                         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-                        Log.d(TAG, "NP 됨");
                         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                        Log.d(TAG, "GP 됨");
 
                         /*// 수동으로 위치 구하기
                         String locationProvider = LocationManager.GPS_PROVIDER;
@@ -129,5 +136,45 @@ public class Air extends Fragment {
                 //resume tasks needing this permission
             }
         }
+    }
+
+    String getAddressFromLocation(Location location, Locale locale) {
+        List<Address> addressList = null ;
+        Geocoder geocoder = new Geocoder( getActivity(), locale);
+
+        //------------------------------------------------------------------
+        // 지오코더를 이용하여 주소 리스트를 구합니다.
+
+        try {
+            addressList = geocoder.getFromLocation(
+                    location.getLatitude(),
+                    location.getLongitude(),
+                    1
+            );
+        } catch (IOException e) {
+            Toast. makeText( getActivity(), "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
+            e.printStackTrace();
+            return "주소 인식 불가" ;
+        }
+
+        //------------------------------------------------------------------
+        // 주소 리스트가 비어있는지 확인합니다. 비어 있으면, 주소 대신 그것이 없음을 알리는 문자열을 리턴합니다.
+
+        if (1 > addressList.size()) {
+            return "해당 위치에 주소 없음" ;
+        }
+
+        //------------------------------------------------------------------
+        // 주소를 담는 문자열을 생성하고 리턴합니다.
+
+        Address address = addressList.get(0);
+        StringBuilder addressStringBuilder = new StringBuilder();
+        for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
+            addressStringBuilder.append(address.getAddressLine(i));
+            if (i < address.getMaxAddressLineIndex())
+                addressStringBuilder.append("\n");
+        }
+
+        return addressStringBuilder.toString();
     }
 }
