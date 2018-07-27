@@ -24,7 +24,6 @@ public class Main extends Fragment {
             @Override
             public void onClick(View v) {
                 test.setText("The button works well!");
-                //new Weather.RunningAsyncTask().execute(view);
             }
         });
         return view;

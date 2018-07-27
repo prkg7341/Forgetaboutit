@@ -2,6 +2,7 @@ package com.jaewoo.forgetaboutit;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,7 +18,7 @@ import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class Water {
+public class Water extends Fragment {
 
     public Water() {
 
