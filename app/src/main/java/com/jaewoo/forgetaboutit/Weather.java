@@ -220,9 +220,6 @@ public class Weather extends Fragment {
                 } else {
                     rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
                 }
-                /*while ((line = rd.readLine()) != null) {
-                    sb.append(line + "\n");
-                }*/
                 rd.close();
                 conn.disconnect();
 

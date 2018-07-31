@@ -29,7 +29,7 @@ public class Water extends Fragment {
         Button renew = (Button) view.findViewById(R.id.renewWater);
         final TextView weatherView = (TextView) view.findViewById(R.id.waterView);
 
-        final Water.RunningAsyncTask rat = new Water.RunningAsyncTask(view);
+        final Water.urlAsyncTask rat = new Water.urlAsyncTask(view);
 
         renew.setOnClickListener(new View.OnClickListener() {
             @Override
