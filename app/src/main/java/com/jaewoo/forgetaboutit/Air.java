@@ -48,55 +48,64 @@ public class Air extends Fragment {
 
     }
 
-    Button button;
-    double latitude;
-    double longitude;
-    LocationListener locationListener;
-    LocationManager locationManager;
+    // field 선언부
+    Button renew; // 새로고침 버튼
+    double latitude; // 위도
+    double longitude; // 경도
+    LocationListener locationListener; // 위치변화 감지를 위한 LocationListener
+    LocationManager locationManager; // 위치서비스 시스템 관리를 위한 LocationManager
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 1;
-    private String locationAddress;
-    Location location;
+    private String locationAddress; // 주소
+    private Location location; // location
+    private StringBuilder sb = new StringBuilder(); // TM좌표, 주소, 측정소 정보를 임시로 저장하고 미세먼지 정보를 출력하기 위한 StringBuilder
+    private String key = "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
 
+    // fragment가 return될 때 실행되는 메소드
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
+        // 초기 화면을 "air"으로 설정
         final View view = inflater.inflate(R.layout.air, container, false);
 
+        //버튼 클릭시 실행 여부를 다시 확인하는 AlertDialog 생성
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
 
-        // 제목셋팅-생략가능
+        // 제목설정(생략가능)
         alertDialogBuilder.setTitle("Alert");
 
-        // AlertDialog 셋팅
+        // AlertDialog 설정
         alertDialogBuilder
-                .setMessage("renew?")//생략가능
-                .setCancelable(true) //생략하면 default true
-                .setPositiveButton("renew",
+                .setMessage("renew?")// 출력할 메시지(생략가능)
+                .setCancelable(true) // true일 때 AlertDialog 창 밖을 터치하면 창이 꺼지도록 설정(생략시 default는 true)
+                .setPositiveButton("renew", // AlertDialog에서 renew를 선택하면
                         new DialogInterface.OnClickListener() {
                             public void onClick(
                                     DialogInterface dialog, int id) {
-                                getLocation();
-                                new LocationAsyncTask().execute(view); //주소(읍면동)
-                                new TMAsyncTask().execute(view); //TM좌표
-                                new MeasuringStationAsyncTask().execute(view); //측정소
+                                location = getLocation(); // 위치서비스를 통해 WGS84 위경도 좌표 획득하여 location에 저장
+                                new AddressAsyncTask().execute(view); // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
+                                new TMAsyncTask().execute(view); // 주소(읍면동)을 통해 TM좌표 획득
+                                new MeasuringStationAsyncTask().execute(view); // TM좌표를 통해 인근측정소 정보 획득
+                                new AirAsyncTask().execute(view); // 인근측정소 정보를 통해 대기오염정보 획득, 출력
                             }
                         }
                 )
-                .setNegativeButton("cancel",
+                .setNegativeButton("cancel", //AlertDialog에서 cancel을 선택하면
                         new DialogInterface.OnClickListener() {
                             public void onClick(
                                     DialogInterface dialog, int id) {
-                                // 다이얼로그를 취소한다
-                                dialog.cancel();
-                                Toast.makeText(getActivity(), "Update cancelled", Toast.LENGTH_SHORT).show();
+                                dialog.cancel(); // 다이얼로그를 취소
+                                Toast.makeText(getActivity(), "Update cancelled", Toast.LENGTH_SHORT).show(); //"Update cancelled" 라는 Toast 메시지를 짧게 출력
                             }
                         }
                 );
 
+        // AlertDialog 생성
         final AlertDialog alertDialog = alertDialogBuilder.create();
 
-        button = view.findViewById(R.id.button);
+        // 새로고침 버튼 초기화
+        renew = view.findViewById(R.id.button);
 
-        button.setOnClickListener(new View.OnClickListener() {
+        // 버튼을 클릭하면 AlertDialog 출력
+        renew.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 alertDialog.show();
@@ -105,7 +114,8 @@ public class Air extends Fragment {
         return view;
     }
 
-    void getLocation(){
+    // 위치서비스를 통해 WGS84 위경도 좌표 획득
+    Location getLocation(){
         if(ContextCompat.checkSelfPermission (Objects.requireNonNull(getActivity()), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission (getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){//권한이 허용되어있으면
             if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)){
@@ -118,7 +128,7 @@ public class Air extends Fragment {
             }
         }
         else{
-            //위치정보 요청 후
+            // 위치정보 요청
             locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
             // GPS 프로바이더 사용가능여부
             boolean isGPSEnabled = Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -163,6 +173,7 @@ public class Air extends Fragment {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
             }
         }
+        return location;
     }
 
     @Override
@@ -178,7 +189,7 @@ public class Air extends Fragment {
 
     String getAddressFromLocation(Location location, Locale locale) {
         List<Address> addressList;
-        Geocoder geocoder = new Geocoder( getActivity(), locale);
+        Geocoder geocoder = new Geocoder(getActivity(), locale);
 
         //------------------------------------------------------------------
         // 지오코더를 이용하여 주소 리스트를 구합니다.
@@ -217,17 +228,16 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-    class LocationAsyncTask extends AsyncTask<View, String, String> {
+    class AddressAsyncTask extends AsyncTask<View, String, String> {
 
-        LocationAsyncTask(){
+        AddressAsyncTask(){
 
         }
 
         @Override
         protected String doInBackground(View... views) {
             locationAddress = getAddressFromLocation(location, Locale.KOREA);
-            return "위도: " + latitude + "\n경도: " + longitude+"\n"
-                    +locationAddress;
+            return locationAddress;
         }
     }
 
@@ -242,7 +252,6 @@ public class Air extends Fragment {
         private URL url;
         private HttpURLConnection conn;
         private BufferedReader rd;
-        private StringBuilder sb = new StringBuilder();
 
         @Override
         protected String doInBackground(View... views) {
@@ -253,13 +262,14 @@ public class Air extends Fragment {
             String sggName, umdName, tmX  , tmY;
             sggName = null; umdName = null; tmX = null; tmY = null;
 
-            getInfo();
+            connectURL();
 
-            return(parse(bsggName, bumdName, btmX, btmY, sggName, umdName, tmX , tmY));
+            parse(bsggName, bumdName, btmX, btmY, sggName, umdName, tmX , tmY);
+
+            return null;
         }
 
-        private void getInfo() {
-            String key = "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D";
+        private void connectURL() {
 
             urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getTMStdrCrdnt"); //URL
             try {
@@ -284,7 +294,7 @@ public class Air extends Fragment {
             }
         }
 
-        private String parse(boolean bsggName, boolean bumdName, boolean btmX, boolean btmY,
+        private void parse(boolean bsggName, boolean bumdName, boolean btmX, boolean btmY,
                              String sggName, String umdName, String tmX , String tmY) {
             XmlPullParser parser;
             int parserEvent;
@@ -347,8 +357,6 @@ public class Air extends Fragment {
             } catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
-
-            return sb.toString();
         }
     }
 
@@ -363,42 +371,26 @@ public class Air extends Fragment {
         private URL url;
         private HttpURLConnection conn;
         private BufferedReader rd;
-        private StringBuilder sb = new StringBuilder();
-        TextView airView;
 
         @Override
         protected String doInBackground(View... views) {
 
-            airView = views[0].findViewById(R.id.airView);
+            boolean bstationName = false;
+            String stationName = null;
 
-            boolean bsidoName, bsggName, bumdName, btmX, btmY;
-            bsidoName = false; bsggName = false; bumdName = false; btmX = false;
-            btmY = false;
-
-            String sidoName, sggName, umdName, tmX  , tmY;
-            sidoName = null; sggName = null; umdName = null; tmX = null;
-            tmY = null;
-
-            getInfo();
-
-            return(parse(bsidoName,bsggName, bumdName, btmX, btmY,sidoName, sggName, umdName, tmX , tmY));
+            connectURL();
+            sb.delete(0, sb.length());
+            parse(bstationName,stationName);
+            return null;
         }
 
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-            airView.setText(s); Log.d(TAG, url.toString());
-            Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
-        }
+        private void connectURL() {
 
-        private void getInfo() {
-            String key = "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D";
-
-            urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getTMStdrCrdnt"); //URL
+            urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getNearbyMsrstnList"); //URL
             try {
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
-                urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8")).append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8")); //읍면동
-                urlBuilder.append("&").append(URLEncoder.encode("pageNum", "UTF-8")).append("=").append(URLEncoder.encode("1", "UTF-8")); //페이지 수
-                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8")).append("=").append(URLEncoder.encode("999", "UTF-8")); //줄 수
+                urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
+                urlBuilder.append("&").append(URLEncoder.encode("tmY", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[1], "UTF-8")); //페이지 수
                 url = new URL(urlBuilder.toString());
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -416,8 +408,7 @@ public class Air extends Fragment {
             }
         }
 
-        private String parse(boolean bsidoName,boolean bsggName, boolean bumdName, boolean btmX, boolean btmY,
-                             String sidoName, String sggName, String umdName, String tmX , String tmY) {
+        private void parse(boolean bstationName, String stationName) {
             XmlPullParser parser;
             int parserEvent;
 
@@ -425,54 +416,26 @@ public class Air extends Fragment {
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 parser = factory.newPullParser();
                 parserEvent = parser.getEventType();
-                //factory.setNamespaceAware(true); //되면 테스트해보기 (없어도 되는지)
 
                 parser.setInput(url.openStream(), null);
 
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
                     switch (parserEvent) {
                         case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
-                            if (parser.getName().equals("sidoName")) { //sidoName(시도이름) 만나면 내용을 받을수 있게 하자
-                                bsidoName = true;
-                            }
-                            if (parser.getName().equals("sggName")) { //sggName(시군구이름) 만나면 내용을 받을수 있게 하자
-                                bsggName = true;
-                            }
-                            if (parser.getName().equals("umdName")) { //umdName(읍면동이름) 만나면 내용을 받을수 있게 하자
-                                bumdName = true;
-                            }
-                            if (parser.getName().equals("tmX")) { //tmX(TM X좌표) 만나면 내용을 받을수 있게 하자
-                                btmX = true;
-                            }
-                            if (parser.getName().equals("tmY")) { //tmY(TM Y좌표) 만나면 내용을 받을수 있게 하자
-                                btmY = true;
+                            if (parser.getName().equals("stationName")) { //stationName(측정소 이름) 만나면 내용을 받을수 있게 하자
+                                bstationName = true;
                             }
                             break;
 
                         case XmlPullParser.TEXT://parser가 내용에 접근했을때
-                            if (bsidoName) { //bsidoName true일 때 태그의 내용을 저장.
-                                sidoName = parser.getText();
-                            }
-                            if (bsggName) { //bsggName true일 때 태그의 내용을 저장.
-                                sggName = parser.getText();
-                                bsggName = false;
-                            }
-                            if (bumdName) { //bumdName true일 때 태그의 내용을 저장.
-                                umdName = parser.getText();
-                                bumdName = false;
-                            }
-                            if (btmX) { //btmX true일 때 태그의 내용을 저장.
-                                tmX = parser.getText();
-                                btmX = false;
-                            }
-                            if (btmY) { //btmY true일 때 태그의 내용을 저장.
-                                tmY = parser.getText();
-                                btmY = false;
+                            if (bstationName) { //bsggName true일 때 태그의 내용을 저장.
+                                stationName = parser.getText();
+                                bstationName = false;
                             }
                             break;
                         case XmlPullParser.END_TAG:
-                            if (parser.getName().equals("item") && sggName.equals(locationAddress.split(" ")[2]) && umdName.equals(locationAddress.split(" ")[3])) {
-                                sb.append(tmX).append(" ").append(tmY);
+                            if (parser.getName().equals("item")) {
+                                sb.append(stationName).append(" ");
                             }
                             break;
                     }
@@ -485,7 +448,140 @@ public class Air extends Fragment {
             } catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
+            sb.deleteCharAt(sb.length()-1);
+        }
+    }
 
+    @SuppressLint("StaticFieldLeak")
+    class AirAsyncTask extends AsyncTask<View, String, String>{
+
+        AirAsyncTask(){
+
+        }
+
+        private StringBuilder urlBuilder;
+        private URL url;
+        private HttpURLConnection conn;
+        private BufferedReader rd;
+        TextView airView;
+        boolean bdataTime = false; boolean bpm10Value = false; boolean bpm10Grade1h = false;
+        boolean bpm25Value = false; boolean bpm25Grade1h = false;
+        String dataTime = null; String pm10Value = null; String pm10Grade1h = null;
+        String pm25Value = null; String pm25Grade1h = null;
+
+        @Override
+        protected String doInBackground(View... views) {
+
+            airView = views[0].findViewById(R.id.airView);
+
+            connectURL();
+            sb.delete(0, sb.length());
+            return(parse());
+        }
+
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            airView.setText(s); Log.d(TAG, url.toString());
+            Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+        }
+
+        private void connectURL() {
+
+            urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty"); //URL
+            try {
+                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
+                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8")).append("=").append(URLEncoder.encode("50", "UTF-8")); //줄 수
+                urlBuilder.append("&").append(URLEncoder.encode("stationName", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //측정소명
+                urlBuilder.append("&").append(URLEncoder.encode("dataTerm", "UTF-8")).append("=").append(URLEncoder.encode("DAILY", "UTF-8")); //데이터기간
+                urlBuilder.append("&").append(URLEncoder.encode("ver", "UTF-8")).append("=").append(URLEncoder.encode("1.3", "UTF-8")); //버전
+                url = new URL(urlBuilder.toString());
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Content-type", "application/json");
+                if (conn.getResponseCode() >= 200 && conn.getResponseCode() <= 300) {
+                    rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                } else {
+                    rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                }
+                rd.close();
+                conn.disconnect();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private String parse() {
+            XmlPullParser parser;
+            int parserEvent;
+
+            try {
+                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                parser = factory.newPullParser();
+                parserEvent = parser.getEventType();
+
+                parser.setInput(url.openStream(), null);
+
+                while (parserEvent != XmlPullParser.END_DOCUMENT) {
+                    switch (parserEvent) {
+                        case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
+                            if (parser.getName().equals("dataTime")) { //dataTime(측정시간) 만나면 내용을 받을수 있게 하자
+                                bdataTime = true;
+                            }
+                            if (parser.getName().equals("pm10Value")) { //pm10Value(미세먼지 농도) 만나면 내용을 받을수 있게 하자
+                                bpm10Value = true;
+                            }
+                            if (parser.getName().equals("pm10Grade1h")) { //pm10Grade1h(미세먼지 등급) 만나면 내용을 받을수 있게 하자
+                                bpm10Grade1h = true;
+                            }
+                            if (parser.getName().equals("pm25Value")) { //pm25Value(초미세먼지 농도) 만나면 내용을 받을수 있게 하자
+                                bpm25Value = true;
+                            }
+                            if (parser.getName().equals("pm25Grade1h")) { //pm25Grade1h(초미세먼지 등급) 만나면 내용을 받을수 있게 하자
+                                bpm25Grade1h = true;
+                            }
+
+                            break;
+
+                        case XmlPullParser.TEXT://parser가 내용에 접근했을때
+                            if (bdataTime) { //bsggName true일 때 태그의 내용을 저장.
+                                dataTime = parser.getText();
+                                bdataTime = false;
+                            }
+                            if (bpm10Value) { //bsggName true일 때 태그의 내용을 저장.
+                                pm10Value = parser.getText();
+                                bpm10Value = false;
+                            }
+                            if (bpm10Grade1h) { //bsggName true일 때 태그의 내용을 저장.
+                                pm10Grade1h = parser.getText();
+                                bpm10Grade1h = false;
+                            }
+                            if (bpm25Value) { //bsggName true일 때 태그의 내용을 저장.
+                                pm25Value = parser.getText();
+                                bpm25Value = false;
+                            }
+                            if (bpm25Grade1h) { //bsggName true일 때 태그의 내용을 저장.
+                                pm25Grade1h = parser.getText();
+                                bpm25Grade1h = false;
+                            }
+                            break;
+                        case XmlPullParser.END_TAG:
+                            if (parser.getName().equals("item")) {
+                                sb.append(dataTime).append(" ").append(pm10Value).append(" ").append(pm10Grade1h)
+                                        .append(" ").append(pm25Value).append(" ").append(pm25Grade1h);
+                            }
+                            break;
+                    }
+                    try {
+                        parserEvent = parser.next();
+                    } catch (XmlPullParserException | IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (XmlPullParserException | IOException e) {
+                e.printStackTrace();
+            }
+            sb.deleteCharAt(sb.length()-1);
             return sb.toString();
         }
     }
