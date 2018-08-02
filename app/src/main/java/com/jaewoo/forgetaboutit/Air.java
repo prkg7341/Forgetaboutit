@@ -54,19 +54,22 @@ public class Air extends Fragment {
     double longitude; // 경도
     LocationListener locationListener; // 위치변화 감지를 위한 LocationListener
     LocationManager locationManager; // 위치서비스 시스템 관리를 위한 LocationManager
-    private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 1;
+    private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS = 1;
+    private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 2;
     private String locationAddress; // 주소
     private Location location; // location
     private StringBuilder sb = new StringBuilder(); // TM좌표, 주소, 측정소 정보를 임시로 저장하고 미세먼지 정보를 출력하기 위한 StringBuilder
-    private String key = "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
+    private String key =
+            "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
 
     // fragment가 return될 때 실행되는 메소드
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
 
         // 초기 화면을 "air"으로 설정
         final View view = inflater.inflate(R.layout.air, container, false);
 
-        //버튼 클릭시 실행 여부를 다시 확인하는 AlertDialog 생성
+        // 버튼 클릭시 실행 여부를 다시 확인하는 AlertDialog 생성
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
 
         // 제목설정(생략가능)
@@ -74,26 +77,33 @@ public class Air extends Fragment {
 
         // AlertDialog 설정
         alertDialogBuilder
-                .setMessage("renew?")// 출력할 메시지(생략가능)
+                .setMessage("renew?") // 출력할 메시지(생략가능)
                 .setCancelable(true) // true일 때 AlertDialog 창 밖을 터치하면 창이 꺼지도록 설정(생략시 default는 true)
-                .setPositiveButton("renew", // AlertDialog에서 renew를 선택하면
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(
-                                    DialogInterface dialog, int id) {
-                                location = getLocation(); // 위치서비스를 통해 WGS84 위경도 좌표 획득하여 location에 저장
-                                new AddressAsyncTask().execute(view); // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
-                                new TMAsyncTask().execute(view); // 주소(읍면동)을 통해 TM좌표 획득
-                                new MeasuringStationAsyncTask().execute(view); // TM좌표를 통해 인근측정소 정보 획득
-                                new AirAsyncTask().execute(view); // 인근측정소 정보를 통해 대기오염정보 획득, 출력
+                .setPositiveButton("renew", // PositiveButton 이름을 "renew"로 설정
+                        new DialogInterface.OnClickListener() { // 리스너 생성
+                            public void onClick(DialogInterface dialog, int id) { // AlertDialog에서 renew를 선택하면
+                                // 위치서비스를 통해 WGS84 위경도 좌표 획득하여 location에 저장
+                                location = getLocation();
+                                // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
+                                new AddressAsyncTask().execute(view);
+                                // 주소(읍면동)을 통해 TM좌표 획득
+                                new TMAsyncTask().execute(view);
+                                // TM좌표를 통해 인근측정소 정보 획득
+                                new MeasuringStationAsyncTask().execute(view);
+                                // 인근측정소 정보를 통해 대기오염정보 획득, TextView에 출력
+                                new AirAsyncTask().execute(view);
                             }
                         }
                 )
-                .setNegativeButton("cancel", //AlertDialog에서 cancel을 선택하면
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(
+                .setNegativeButton("cancel", // NegativeButton의 이름을 "cancel"로 설정
+                        new DialogInterface.OnClickListener() { // 리스너 생성
+                            public void onClick( // AlertDialog에서 cancel을 선택하면
                                     DialogInterface dialog, int id) {
-                                dialog.cancel(); // 다이얼로그를 취소
-                                Toast.makeText(getActivity(), "Update cancelled", Toast.LENGTH_SHORT).show(); //"Update cancelled" 라는 Toast 메시지를 짧게 출력
+                                // 다이얼로그를 취소
+                                dialog.cancel();
+                                // "Update cancelled" 라는 Toast 메시지를 짧게 출력
+                                Toast.makeText(getActivity(),
+                                        "Update cancelled", Toast.LENGTH_SHORT).show();
                             }
                         }
                 );
@@ -114,39 +124,74 @@ public class Air extends Fragment {
         return view;
     }
 
-    // 위치서비스를 통해 WGS84 위경도 좌표 획득
+    // 위치서비스를 통해 WGS84 위경도 좌표를 획득하는 메소드
     Location getLocation(){
-        if(ContextCompat.checkSelfPermission (Objects.requireNonNull(getActivity()), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission (getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){//권한이 허용되어있으면
-            if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)){
-                ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_CONTACTS);
-                Log.d(TAG, "권한 없음1");
+        // 권한이 허용되어 있지 않으면
+        if(ContextCompat.checkSelfPermission (Objects.requireNonNull(getActivity()),
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED
+                && ContextCompat.checkSelfPermission (getActivity(),
+                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED){
+            // 이전에 사용자가 "ACCESS_COARSE_LOCATION" 권한을 거부한 적이 있으면
+            if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
+                    Manifest.permission.ACCESS_COARSE_LOCATION)){
+                // 권한이 필요한 이유를 설명
+                Toast.makeText(getActivity(),
+                        "정확한 위치정보를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show();
+                // 권한 요청
+                ActivityCompat.requestPermissions(getActivity(), new String[]{
+                        Manifest.permission.ACCESS_COARSE_LOCATION},
+                        MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
             }
+            // 이전에 사용자가 "ACCESS_FINE_LOCATION" 권한을 거부한 적이 있으면
+            if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
+                    Manifest.permission.ACCESS_FINE_LOCATION)){
+                // 권한이 필요한 이유를 설명
+                Toast.makeText(getActivity(),
+                        "정확한 위치정보를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show();
+                // 권한 요청
+                ActivityCompat.requestPermissions(getActivity(), new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION},
+                        MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+            }
+            // 권한 요청이 처음이라면
             else{
-                ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_CONTACTS);
-                Log.d(TAG, "권한 없음2");
+                // 권한 요청
+                ActivityCompat.requestPermissions(getActivity(), new String[]{
+                        Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
+                ActivityCompat.requestPermissions(getActivity(), new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
             }
         }
+        // 권한이 허용되어 있으면
         else{
             // 위치정보 요청
-            locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
+            locationManager =
+                    (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
             // GPS 프로바이더 사용가능여부
-            boolean isGPSEnabled = Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
+            boolean isGPSEnabled =
+                    Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
             // 네트워크 프로바이더 사용가능여부
-            boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            boolean isNetworkEnabled =
+                    locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
+            // GPS, 네트워크 프로바이더 사용가능여부 확인 Log
             Log.d(TAG, "isGPSEnabled="+ isGPSEnabled);
             Log.d(TAG, "isNetworkEnabled="+ isNetworkEnabled);
 
+            // GPS, 네트워크 프로바이더 둘다 사용이 불가능한 경우
             if(!(isGPSEnabled | isNetworkEnabled)){
                 Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_SHORT).show();
             }
+            // 사용가능한 프로바이더가 있는 경우
             else {
+                // "location'을 프로바이더에서 얻은 위치로 갱신
                 location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
+                // LocationListener 선언
                 locationListener = new LocationListener() {
 
+                    // 위치 변화가 감지되면 위경도 갱신
                     public void onLocationChanged(Location location) {
                         longitude = location.getLongitude(); //경도
                         latitude = location.getLatitude(); //위도
@@ -168,21 +213,50 @@ public class Air extends Fragment {
                     }
                 };
 
-                // Register the listener with the Location Manager to receive location updates
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                // 위치정보를 얻기 위해 LocationListener를 LocationManager에 등록
+                // 1초(1000ms)마다, 10m마다 갱신
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                        1000, 10, locationListener);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                        1000, 10, locationListener);
             }
         }
         return location;
     }
 
+    //
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        // 해당 메소드가 존재하는 버전일 경우
         if (Build.VERSION.SDK_INT >= 23) {
-            if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
-                Log.v(TAG,"Permission: "+permissions[0]+ "was "+grantResults[0]);
-                //resume tasks needing this permission
+            switch (requestCode) {
+                case MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS:
+                    // 요청이 거절되면 length=0
+                    if (grantResults.length > 0
+                            && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
+                        //resume tasks needing this permission
+                        break;
+                    }
+                    else{
+                        Toast.makeText(getActivity(),
+                                "권한이 거부된 상태입니다.", Toast.LENGTH_SHORT).show();
+                    }
+
+                case MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION:
+                    // 요청이 거절되면 length=0
+                    if (grantResults.length > 0
+                            && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
+                        //resume tasks needing this permission
+                        break;
+                    }
+                    else{
+                        Toast.makeText(getActivity(),
+                                "권한이 거부된 상태입니다.", Toast.LENGTH_SHORT).show();
+                    }
             }
         }
     }
@@ -191,7 +265,6 @@ public class Air extends Fragment {
         List<Address> addressList;
         Geocoder geocoder = new Geocoder(getActivity(), locale);
 
-        //------------------------------------------------------------------
         // 지오코더를 이용하여 주소 리스트를 구합니다.
 
         try {
@@ -201,19 +274,18 @@ public class Air extends Fragment {
                     1
             );
         } catch (IOException e) {
-            Toast.makeText(getActivity(), "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
+            Toast.makeText(getActivity(),
+                    "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
             e.printStackTrace();
             return "주소 인식 불가" ;
         }
 
-        //------------------------------------------------------------------
         // 주소 리스트가 비어있는지 확인합니다. 비어 있으면, 주소 대신 그것이 없음을 알리는 문자열을 리턴합니다.
 
         if (1 > addressList.size()) {
             return "해당 위치에 주소 없음" ;
         }
 
-        //------------------------------------------------------------------
         // 주소를 담는 문자열을 생성하고 리턴합니다.
 
         Address address = addressList.get(0);
@@ -263,7 +335,6 @@ public class Air extends Fragment {
             sggName = null; umdName = null; tmX = null; tmY = null;
 
             connectURL();
-
             parse(bsggName, bumdName, btmX, btmY, sggName, umdName, tmX , tmY);
 
             return null;
@@ -303,10 +374,7 @@ public class Air extends Fragment {
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 parser = factory.newPullParser();
                 parserEvent = parser.getEventType();
-                //factory.setNamespaceAware(true); //되면 테스트해보기 (없어도 되는지)
-
                 parser.setInput(url.openStream(), null);
-
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
                     switch (parserEvent) {
                         case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
@@ -377,11 +445,14 @@ public class Air extends Fragment {
 
             boolean bstationName = false;
             String stationName = null;
-
             connectURL();
             sb.delete(0, sb.length());
             parse(bstationName,stationName);
             return null;
+        }
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
         }
 
         private void connectURL() {
@@ -389,8 +460,10 @@ public class Air extends Fragment {
             urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getNearbyMsrstnList"); //URL
             try {
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
-                urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
-                urlBuilder.append("&").append(URLEncoder.encode("tmY", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[1], "UTF-8")); //페이지 수
+                if(sb.toString().split("").length >= 2) {
+                    urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
+                    urlBuilder.append("&").append(URLEncoder.encode("tmY", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[1], "UTF-8")); //페이지 수
+                }
                 url = new URL(urlBuilder.toString());
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -448,6 +521,7 @@ public class Air extends Fragment {
             } catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
+            if(sb.length()!=0)
             sb.deleteCharAt(sb.length()-1);
         }
     }
@@ -475,14 +549,18 @@ public class Air extends Fragment {
             airView = views[0].findViewById(R.id.airView);
 
             connectURL();
-            sb.delete(0, sb.length());
             return(parse());
         }
 
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
-            airView.setText(s); Log.d(TAG, url.toString());
-            Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+            if(s.length()!=0) {
+                airView.setText(s);
+                Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+            }
+            else{
+                Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();
+            }
         }
 
         private void connectURL() {
@@ -490,10 +568,10 @@ public class Air extends Fragment {
             urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty"); //URL
             try {
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
-                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8")).append("=").append(URLEncoder.encode("50", "UTF-8")); //줄 수
                 urlBuilder.append("&").append(URLEncoder.encode("stationName", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //측정소명
                 urlBuilder.append("&").append(URLEncoder.encode("dataTerm", "UTF-8")).append("=").append(URLEncoder.encode("DAILY", "UTF-8")); //데이터기간
                 urlBuilder.append("&").append(URLEncoder.encode("ver", "UTF-8")).append("=").append(URLEncoder.encode("1.3", "UTF-8")); //버전
+                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8")).append("=").append(URLEncoder.encode("1", "UTF-8")); //받아올 데이터 개수
                 url = new URL(urlBuilder.toString());
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -540,7 +618,6 @@ public class Air extends Fragment {
                             if (parser.getName().equals("pm25Grade1h")) { //pm25Grade1h(초미세먼지 등급) 만나면 내용을 받을수 있게 하자
                                 bpm25Grade1h = true;
                             }
-
                             break;
 
                         case XmlPullParser.TEXT://parser가 내용에 접근했을때
@@ -565,10 +642,23 @@ public class Air extends Fragment {
                                 bpm25Grade1h = false;
                             }
                             break;
+
                         case XmlPullParser.END_TAG:
                             if (parser.getName().equals("item")) {
-                                sb.append(dataTime).append(" ").append(pm10Value).append(" ").append(pm10Grade1h)
-                                        .append(" ").append(pm25Value).append(" ").append(pm25Grade1h);
+                                switch(Integer.parseInt(pm10Grade1h)) {
+                                    case 1: pm10Grade1h = "좋음"; break;
+                                    case 2: pm10Grade1h = "보통"; break;
+                                    case 3: pm10Grade1h = "나쁨"; break;
+                                    case 4: pm10Grade1h = "매우나쁨"; break;
+                                }
+                                switch(Integer.parseInt(pm25Grade1h)) {
+                                    case 1: pm25Grade1h = "좋음"; break;
+                                    case 2: pm25Grade1h = "보통"; break;
+                                    case 3: pm25Grade1h = "나쁨"; break;
+                                    case 4: pm25Grade1h = "매우나쁨"; break;
+                                }
+                                    sb.append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value).append("\n미세먼지등급: ").append(pm10Grade1h)
+                                            .append("\n초미세먼지농도: ").append(pm25Value).append("\n초미세먼지등급: ").append(pm25Grade1h);
                             }
                             break;
                     }
@@ -576,12 +666,12 @@ public class Air extends Fragment {
                         parserEvent = parser.next();
                     } catch (XmlPullParserException | IOException e) {
                         e.printStackTrace();
+                        break;
                     }
                 }
             } catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
-            sb.deleteCharAt(sb.length()-1);
             return sb.toString();
         }
     }
