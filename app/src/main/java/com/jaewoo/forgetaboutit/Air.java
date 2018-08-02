@@ -54,11 +54,13 @@ public class Air extends Fragment {
     double longitude; // 경도
     LocationListener locationListener; // 위치변화 감지를 위한 LocationListener
     LocationManager locationManager; // 위치서비스 시스템 관리를 위한 LocationManager
-    private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS = 1;
-    private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 2;
+    private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS = 1; // 권한 구분
+    private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 2; // 권한 구분
     private String locationAddress; // 주소
     private Location location; // location
     private StringBuilder sb = new StringBuilder(); // TM좌표, 주소, 측정소 정보를 임시로 저장하고 미세먼지 정보를 출력하기 위한 StringBuilder
+    boolean isGPSEnabled; // GPS로 위치서비스 사용가능여부
+    boolean isNetworkEnabled; // Network로 위치서비스 사용가능여부
     private String key =
             "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
 
@@ -168,11 +170,9 @@ public class Air extends Fragment {
             locationManager =
                     (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
             // GPS 프로바이더 사용가능여부
-            boolean isGPSEnabled =
-                    Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
+            isGPSEnabled = Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
             // 네트워크 프로바이더 사용가능여부
-            boolean isNetworkEnabled =
-                    locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
             // GPS, 네트워크 프로바이더 사용가능여부 확인 Log
             Log.d(TAG, "isGPSEnabled="+ isGPSEnabled);
@@ -224,7 +224,7 @@ public class Air extends Fragment {
         return location;
     }
 
-    //
+    // 뭐라쓸지 고민
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -234,69 +234,39 @@ public class Air extends Fragment {
             switch (requestCode) {
                 case MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS:
                     // 요청이 거절되면 length=0
+                    // "ACCESS_COARSE_LOCATIONS" 권한이 허용되어 있으면
                     if (grantResults.length > 0
                             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                         Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
-                        //resume tasks needing this permission
+                        Toast.makeText(getActivity(),
+                                "MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS 권한이 허용되어있습니다.",Toast.LENGTH_SHORT).show();
+                        // resume tasks needing this permission
                         break;
                     }
+                    // "ACCESS_COARSE_LOCATIONS" 권한이 거부되어 있으면
                     else{
                         Toast.makeText(getActivity(),
-                                "권한이 거부된 상태입니다.", Toast.LENGTH_SHORT).show();
+                                "MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS 권한이 거부된 상태입니다.", Toast.LENGTH_LONG).show();
                     }
+                    break;
 
                 case MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION:
                     // 요청이 거절되면 length=0
+                    // "MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION" 권한이 허용되어 있으면
                     if (grantResults.length > 0
                             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                         Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
-                        //resume tasks needing this permission
+                        // resume tasks needing this permission
                         break;
                     }
+                    // "MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION" 권한이 거부되어 있으면
                     else{
                         Toast.makeText(getActivity(),
                                 "권한이 거부된 상태입니다.", Toast.LENGTH_SHORT).show();
                     }
+                    break;
             }
         }
-    }
-
-    String getAddressFromLocation(Location location, Locale locale) {
-        List<Address> addressList;
-        Geocoder geocoder = new Geocoder(getActivity(), locale);
-
-        // 지오코더를 이용하여 주소 리스트를 구합니다.
-
-        try {
-            addressList = geocoder.getFromLocation(
-                    location.getLatitude(),
-                    location.getLongitude(),
-                    1
-            );
-        } catch (IOException e) {
-            Toast.makeText(getActivity(),
-                    "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
-            e.printStackTrace();
-            return "주소 인식 불가" ;
-        }
-
-        // 주소 리스트가 비어있는지 확인합니다. 비어 있으면, 주소 대신 그것이 없음을 알리는 문자열을 리턴합니다.
-
-        if (1 > addressList.size()) {
-            return "해당 위치에 주소 없음" ;
-        }
-
-        // 주소를 담는 문자열을 생성하고 리턴합니다.
-
-        Address address = addressList.get(0);
-        StringBuilder addressStringBuilder = new StringBuilder();
-        for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
-            addressStringBuilder.append(address.getAddressLine(i));
-            if (i < address.getMaxAddressLineIndex())
-                addressStringBuilder.append("\n");
-        }
-
-        return addressStringBuilder.toString();
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -310,6 +280,44 @@ public class Air extends Fragment {
         protected String doInBackground(View... views) {
             locationAddress = getAddressFromLocation(location, Locale.KOREA);
             return locationAddress;
+        }
+
+        // 위치를 이용해 주소를 구하는 메소드
+        String getAddressFromLocation(Location location, Locale locale) {
+            // 주소 리스트 생성
+            List<Address> addressList;
+            // 위경도를 이용해 주소를 구하기 위해 Geocoder 생성
+            Geocoder geocoder = new Geocoder(getActivity(), locale);
+
+            // Geocoder를 이용하여 주소 리스트 갱신
+            try {
+                addressList = geocoder.getFromLocation(
+                        location.getLatitude(),
+                        location.getLongitude(),
+                        1
+                );
+            } catch (IOException e) {
+                Toast.makeText(getActivity(),
+                        "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
+                e.printStackTrace();
+                return "주소 인식 불가" ;
+            }
+
+            // 주소 리스트가 비어있는지 확인 후, 비어 있으면 에러 메시지 리턴
+            if (1 > addressList.size()) {
+                return "해당 위치에 주소 없음" ;
+            }
+
+            // 주소를 담는 문자열을 생성하고 리턴합니다.
+            Address address = addressList.get(0);
+            StringBuilder addressStringBuilder = new StringBuilder();
+            for (int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
+                addressStringBuilder.append(address.getAddressLine(i));
+                if (i < address.getMaxAddressLineIndex())
+                    addressStringBuilder.append("\n");
+            }
+
+            return addressStringBuilder.toString();
         }
     }
 
@@ -344,10 +352,14 @@ public class Air extends Fragment {
 
             urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getTMStdrCrdnt"); //URL
             try {
-                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
-                urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8")).append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8")); //읍면동
-                urlBuilder.append("&").append(URLEncoder.encode("pageNum", "UTF-8")).append("=").append(URLEncoder.encode("1", "UTF-8")); //페이지 수
-                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8")).append("=").append(URLEncoder.encode("999", "UTF-8")); //줄 수
+                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
+                        .append("=").append(key); //서비스 키
+                urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8"))
+                        .append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8")); //읍면동
+                urlBuilder.append("&").append(URLEncoder.encode("pageNum", "UTF-8"))
+                        .append("=").append(URLEncoder.encode("1", "UTF-8")); //페이지 수
+                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8"))
+                        .append("=").append(URLEncoder.encode("999", "UTF-8")); //줄 수
                 url = new URL(urlBuilder.toString());
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -411,7 +423,8 @@ public class Air extends Fragment {
                             }
                             break;
                         case XmlPullParser.END_TAG:
-                            if (parser.getName().equals("item") && sggName.equals(locationAddress.split(" ")[2]) && umdName.equals(locationAddress.split(" ")[3])){
+                            if (parser.getName().equals("item") && sggName.equals(locationAddress.split(" ")[2])
+                                    && umdName.equals(locationAddress.split(" ")[3])){
                                 sb.append(tmX).append(" ").append(tmY);
                             }
                             break;
@@ -450,19 +463,18 @@ public class Air extends Fragment {
             parse(bstationName,stationName);
             return null;
         }
-        @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-        }
 
         private void connectURL() {
 
             urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getNearbyMsrstnList"); //URL
             try {
-                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
+                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
+                        .append("=").append(key); //서비스 키
                 if(sb.toString().split("").length >= 2) {
-                    urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
-                    urlBuilder.append("&").append(URLEncoder.encode("tmY", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[1], "UTF-8")); //페이지 수
+                    urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8"))
+                            .append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
+                    urlBuilder.append("&").append(URLEncoder.encode("tmY", "UTF-8"))
+                            .append("=").append(URLEncoder.encode(sb.toString().split(" ")[1], "UTF-8")); //페이지 수
                 }
                 url = new URL(urlBuilder.toString());
                 conn = (HttpURLConnection) url.openConnection();
@@ -482,6 +494,7 @@ public class Air extends Fragment {
         }
 
         private void parse(boolean bstationName, String stationName) {
+
             XmlPullParser parser;
             int parserEvent;
 
@@ -492,7 +505,7 @@ public class Air extends Fragment {
 
                 parser.setInput(url.openStream(), null);
 
-                while (parserEvent != XmlPullParser.END_DOCUMENT) {
+                while (parserEvent != XmlPullParser.END_DOCUMENT && (sb.length()==0)) {
                     switch (parserEvent) {
                         case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
                             if (parser.getName().equals("stationName")) { //stationName(측정소 이름) 만나면 내용을 받을수 있게 하자
@@ -558,7 +571,7 @@ public class Air extends Fragment {
                 airView.setText(s);
                 Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
             }
-            else{
+            else if(!(isGPSEnabled | isNetworkEnabled)){
                 Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();
             }
         }
@@ -567,11 +580,16 @@ public class Air extends Fragment {
 
             urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty"); //URL
             try {
-                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8")).append("=").append(key); //서비스 키
-                urlBuilder.append("&").append(URLEncoder.encode("stationName", "UTF-8")).append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //측정소명
-                urlBuilder.append("&").append(URLEncoder.encode("dataTerm", "UTF-8")).append("=").append(URLEncoder.encode("DAILY", "UTF-8")); //데이터기간
-                urlBuilder.append("&").append(URLEncoder.encode("ver", "UTF-8")).append("=").append(URLEncoder.encode("1.3", "UTF-8")); //버전
-                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8")).append("=").append(URLEncoder.encode("1", "UTF-8")); //받아올 데이터 개수
+                urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
+                        .append("=").append(key); //서비스 키
+                urlBuilder.append("&").append(URLEncoder.encode("stationName", "UTF-8"))
+                        .append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //측정소명
+                urlBuilder.append("&").append(URLEncoder.encode("dataTerm", "UTF-8"))
+                        .append("=").append(URLEncoder.encode("DAILY", "UTF-8")); //데이터기간
+                urlBuilder.append("&").append(URLEncoder.encode("ver", "UTF-8"))
+                        .append("=").append(URLEncoder.encode("1.3", "UTF-8")); //버전
+                urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8"))
+                        .append("=").append(URLEncoder.encode("1", "UTF-8")); //받아올 데이터 개수
                 url = new URL(urlBuilder.toString());
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -657,8 +675,10 @@ public class Air extends Fragment {
                                     case 3: pm25Grade1h = "나쁨"; break;
                                     case 4: pm25Grade1h = "매우나쁨"; break;
                                 }
-                                    sb.append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value).append("\n미세먼지등급: ").append(pm10Grade1h)
-                                            .append("\n초미세먼지농도: ").append(pm25Value).append("\n초미세먼지등급: ").append(pm25Grade1h);
+                                    sb.append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
+                                            .append("\n미세먼지등급: ").append(pm10Grade1h)
+                                            .append("\n초미세먼지농도: ").append(pm25Value)
+                                            .append("\n초미세먼지등급: ").append(pm25Grade1h);
                             }
                             break;
                     }
