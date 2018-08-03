@@ -85,15 +85,17 @@ public class Air extends Fragment {
                         new DialogInterface.OnClickListener() { // 리스너 생성
                             public void onClick(DialogInterface dialog, int id) { // AlertDialog에서 renew를 선택하면
                                 // 위치서비스를 통해 WGS84 위경도 좌표 획득하여 location에 저장
-                                location = getLocation();
-                                // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
-                                new AddressAsyncTask().execute(view);
-                                // 주소(읍면동)을 통해 TM좌표 획득
-                                new TMAsyncTask().execute(view);
-                                // TM좌표를 통해 인근측정소 정보 획득
-                                new MeasuringStationAsyncTask().execute(view);
-                                // 인근측정소 정보를 통해 대기오염정보 획득, TextView에 출력
-                                new AirAsyncTask().execute(view);
+                                getLocation();
+                                if(location!=null){
+                                    // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
+                                    new AddressAsyncTask().execute(view);
+                                    // 주소(읍면동)을 통해 TM좌표 획득
+                                    new TMAsyncTask().execute(view);
+                                    // TM좌표를 통해 인근측정소 정보 획득
+                                    new MeasuringStationAsyncTask().execute(view);
+                                    // 인근측정소 정보를 통해 대기오염정보 획득, TextView에 출력
+                                    new AirAsyncTask().execute(view);
+                                }
                             }
                         }
                 )
@@ -127,15 +129,15 @@ public class Air extends Fragment {
     }
 
     // 위치서비스를 통해 WGS84 위경도 좌표를 획득하는 메소드
-    Location getLocation(){
+    void getLocation(){Log.d(TAG,"0");
         // 권한이 허용되어 있지 않으면
         if(ContextCompat.checkSelfPermission (Objects.requireNonNull(getActivity()),
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED
                 && ContextCompat.checkSelfPermission (getActivity(),
-                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED){
+                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED){Log.d(TAG,"1");
             // 이전에 사용자가 "ACCESS_COARSE_LOCATION" 권한을 거부한 적이 있으면
             if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
-                    Manifest.permission.ACCESS_COARSE_LOCATION)){
+                    Manifest.permission.ACCESS_COARSE_LOCATION)){Log.d(TAG,"2");
                 // 권한이 필요한 이유를 설명
                 Toast.makeText(getActivity(),
                         "정확한 위치정보를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show();
@@ -146,7 +148,7 @@ public class Air extends Fragment {
             }
             // 이전에 사용자가 "ACCESS_FINE_LOCATION" 권한을 거부한 적이 있으면
             if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
-                    Manifest.permission.ACCESS_FINE_LOCATION)){
+                    Manifest.permission.ACCESS_FINE_LOCATION)){Log.d(TAG,"4");
                 // 권한이 필요한 이유를 설명
                 Toast.makeText(getActivity(),
                         "정확한 위치정보를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show();
@@ -156,7 +158,7 @@ public class Air extends Fragment {
                         MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
             }
             // 권한 요청이 처음이라면
-            else{
+            else{Log.d(TAG,"5");
                 // 권한 요청
                 ActivityCompat.requestPermissions(getActivity(), new String[]{
                         Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
@@ -165,25 +167,22 @@ public class Air extends Fragment {
             }
         }
         // 권한이 허용되어 있으면
-        else{
+        else{Log.d(TAG,"6");
             // 위치정보 요청
             locationManager =
                     (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
+
             // GPS 프로바이더 사용가능여부
             isGPSEnabled = Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
             // 네트워크 프로바이더 사용가능여부
             isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-            // GPS, 네트워크 프로바이더 사용가능여부 확인 Log
-            Log.d(TAG, "isGPSEnabled="+ isGPSEnabled);
-            Log.d(TAG, "isNetworkEnabled="+ isNetworkEnabled);
-
             // GPS, 네트워크 프로바이더 둘다 사용이 불가능한 경우
-            if(!(isGPSEnabled | isNetworkEnabled)){
+            if(!(isGPSEnabled | isNetworkEnabled)){Log.d(TAG,"7");
                 Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_SHORT).show();
             }
             // 사용가능한 프로바이더가 있는 경우
-            else {
+            else {Log.d(TAG,"8");
                 // "location'을 프로바이더에서 얻은 위치로 갱신
                 location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
@@ -221,7 +220,7 @@ public class Air extends Fragment {
                         1000, 10, locationListener);
             }
         }
-        return location;
+        //return location;
     }
 
     // 뭐라쓸지 고민
@@ -572,6 +571,9 @@ public class Air extends Fragment {
                 Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
             }
             else if(!(isGPSEnabled | isNetworkEnabled)){
+                Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();
+            }
+            else{
                 Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();
             }
         }
