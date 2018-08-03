@@ -534,7 +534,7 @@ public class Air extends Fragment {
                 e.printStackTrace();
             }
             if(sb.length()!=0)
-            sb.deleteCharAt(sb.length()-1);
+            sb.deleteCharAt(sb.length()-1).append(" 측정소");
         }
     }
 
@@ -677,7 +677,7 @@ public class Air extends Fragment {
                                     case 3: pm25Grade1h = "나쁨"; break;
                                     case 4: pm25Grade1h = "매우나쁨"; break;
                                 }
-                                    sb.append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
+                                    sb.append("\n").append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
                                             .append("\n미세먼지등급: ").append(pm10Grade1h)
                                             .append("\n초미세먼지농도: ").append(pm25Value)
                                             .append("\n초미세먼지등급: ").append(pm25Grade1h);
