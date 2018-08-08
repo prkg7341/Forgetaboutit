@@ -47,8 +47,10 @@ public class MainActivity extends AppCompatActivity {
         // 페이지 번호(position)별로 return할 fragment 설정
         @Override
         public Fragment getItem(int position) {
-            if(position==0) return main; // 페이지 번호(position)이 0이면 main을 return
-            else return setting; // 페이지 번호(position)이 1이면 setting을 return
+            // 페이지 번호(position)이 0이면 main을 return
+            if(position==0) return main;
+            // 페이지 번호(position)이 1이면 setting을 return
+            else return setting;
         }
 
         // 총 페이지 수 설정

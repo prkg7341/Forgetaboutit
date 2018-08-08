@@ -359,107 +359,151 @@ public class Air extends Fragment {
         @Override
         protected String doInBackground(View... views) {
 
-            buildURL();
-            parse();
+            buildURL(); // URL 생성
+            parse(); // 파싱
             return null;
         }
 
+        // URL을 생성하는 메소드
         private void buildURL() {
 
-            StringBuilder urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getTMStdrCrdnt"); //URL
+            // 공공데이터 API를 사용할 때 필요한 형태로 URL을 생성하기 위해 StringBuilder 생성
+            StringBuilder urlBuilder = new StringBuilder(
+                    "http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getTMStdrCrdnt"); //URL
+            // encode 메소드를 실행할 때 필수적인 입출력 예외처리를 해주기 위해 try-catch 문 사용
+            // "UTF-8"은 유니코드를 위한 가변 길이 문자 인코딩 방식 중 하나 (공공데이터 API 요구사항)
             try {
+                // 각각 항목명에 대한 데이터를 입력해준다.
+                // 서비스 키 입력
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
-                        .append("=").append(key); //서비스 키
+                        .append("=").append(key);
+                // 읍,면,동 입력 (split(" ")을 통해 index 순으로 국가[0] - 시,도[1] - 시,군,구[2] - 읍,면,동[3] 순의 배열 생성)
                 urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8"))
-                        .append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8")); //읍면동
+                        .append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8"));
+                // 페이지 수 입력 (데이터를 한 화면에 모두 나타내기 위함)
                 urlBuilder.append("&").append(URLEncoder.encode("pageNum", "UTF-8"))
-                        .append("=").append(URLEncoder.encode("1", "UTF-8")); //페이지 수
+                        .append("=").append(URLEncoder.encode("1", "UTF-8"));
+                // 줄 수 입력 (데이터를 한 화면에 모두 나타내기 위함)
                 urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8"))
-                        .append("=").append(URLEncoder.encode("999", "UTF-8")); //줄 수
+                        .append("=").append(URLEncoder.encode("999", "UTF-8"));
+                // StringBuilder로 생성한 문자열을 URL 형태로 변환 및 저장
                 url = new URL(urlBuilder.toString());
-
-            } catch (IOException e) {
+            }
+            // 입출력 예외처리
+             catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
         private void parse() {
 
+            // xml 형태의 데이터를 파싱하는 XmlPullParser 객체 생성
             XmlPullParser parser;
+            // 파싱의 작업상태를 나타내는 변수 선언
             int parserEvent;
 
+            // 파싱을 할 때 조건문에 필요한 boolean 형 데이터 선언 및 false로 초기화
             boolean bsggName, bumdName, btmX, btmY;
             bsggName = false; bumdName = false; btmX = false; btmY = false;
 
+            // 파싱에 필요한 String 형 데이터 선언 및 null로 초기화
             String sggName, umdName, tmX  , tmY;
             sggName = null; umdName = null; tmX = null; tmY = null;
 
             try {
+                // XmlPullParserFactory 객체 생성 (XmlPullParser 객체 초기화를 위함)
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                // XmlPullParser 객체 초기화 (파싱 객체 선언의 약속된 형태)
                 parser = factory.newPullParser();
+                // 파싱의 작업상태 초기화
                 parserEvent = parser.getEventType();
+                // 파싱할 데이터를 가져올 URL 스트림 생성
                 parser.setInput(url.openStream(), null);
+
+                // 파싱 작업이 끝날때까지
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
+                    // 파싱의 작업상태에 따라 구분
                     switch (parserEvent) {
-                        case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
-                            if (parser.getName().equals("sggName")) { //sggName(시군구이름) 만나면 내용을 받을수 있게 하자
+                        // parser가 시작 태그를 만날 때 실행
+                        case XmlPullParser.START_TAG:
+                            // parser가 sggName(시군구이름)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("sggName")) {
                                 bsggName = true;
                             }
-                            if (parser.getName().equals("umdName")) { //umdName(읍면동이름) 만나면 내용을 받을수 있게 하자
+                            // parser가 umdName(읍면동이름)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("umdName")) {
                                 bumdName = true;
                             }
-                            if (parser.getName().equals("tmX")) { //tmX(TM X좌표) 만나면 내용을 받을수 있게 하자
+                            // parser가 tmX(TM X좌표)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("tmX")) {
                                 btmX = true;
                             }
-                            if (parser.getName().equals("tmY")) { //tmY(TM Y좌표) 만나면 내용을 받을수 있게 하자
+                            // parser가 tmY(TM Y좌표)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("tmY")) {
                                 btmY = true;
                             }
                             break;
 
-                        case XmlPullParser.TEXT://parser가 내용에 접근했을때
-                            if (bsggName) { //bsggName true일 때 태그의 내용을 저장.
+                        // parser가 내용에 접근할 때 실행
+                        case XmlPullParser.TEXT:
+                            // bsggName이 true일 때 태그의 내용을 저장.
+                            if (bsggName) {
                                 sggName = parser.getText();
                                 bsggName = false;
                             }
-                            if (bumdName) { //bumdName true일 때 태그의 내용을 저장.
+                            // bumdName이 true일 때 태그의 내용을 저장.
+                            if (bumdName) {
                                 umdName = parser.getText();
                                 bumdName = false;
                             }
-                            if (btmX) { //btmX true일 때 태그의 내용을 저장.
+                            // btmX가 true일 때 태그의 내용을 저장.
+                            if (btmX) {
                                 tmX = parser.getText();
                                 btmX = false;
                             }
-                            if (btmY) { //btmY true일 때 태그의 내용을 저장.
+                            // btmY가 true일 때 태그의 내용을 저장.
+                            if (btmY) {
                                 tmY = parser.getText();
                                 btmY = false;
                             }
                             break;
+
+                        // parser가 끝 태그를 만날 때 실행
                         case XmlPullParser.END_TAG:
+                            // parser가 "item" 태그를 만나고 시군구이름과 읍면동이름이 전에 구한 주소값과 같을 때 TM좌표 저장
                             if (parser.getName().equals("item") && sggName.equals(locationAddress.split(" ")[2])
                                     && umdName.equals(locationAddress.split(" ")[3])){
                                 sb.append(tmX).append(" ").append(tmY);
                             }
                             break;
                     }
+                    // parser를 다음 데이터로 이동
                     try {
                         parserEvent = parser.next();
-                    } catch (XmlPullParserException | IOException e) {
+                    }
+                    // xml 파싱과 입출력 관련 예외 처리
+                    catch (XmlPullParserException | IOException e) {
                         e.printStackTrace();
                     }
                 }
-            } catch (XmlPullParserException | IOException e) {
+            }
+            // xml 파싱과 입출력 관련 예외 처리
+            catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
     @SuppressLint("StaticFieldLeak")
+    // TMAsyncTask 클래스에서 얻은 TM좌표를 인자로 측정소 정보를 얻는 메소드를 포함하는 클래스
     class MeasuringStationAsyncTask extends AsyncTask<View, String, String>{
 
+        // 생성자 선언
         MeasuringStationAsyncTask(){
-
+            // 아무 기능도 없지만, 안드로이드에서 생성자 선언을 해주지 않을 때, 오류가 발생할 가능성이 있어 기능없이 선언해준다.
         }
 
+        // 네트워크에 연결할 URL 선언
         private URL url;
 
         @Override
