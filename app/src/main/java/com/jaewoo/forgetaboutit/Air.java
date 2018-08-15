@@ -18,6 +18,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,9 +33,13 @@ import org.xmlpull.v1.XmlPullParserFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+
+import static android.content.ContentValues.TAG;
 
 public class Air extends Fragment {
 
@@ -42,8 +47,10 @@ public class Air extends Fragment {
     public Air() {
         // 아무 기능도 없지만, 안드로이드에서 생성자 선언을 해주지 않을 때, 오류가 발생할 가능성이 있어 기능없이 선언해준다.
     }
+
     // field 선언부
     Button renew; // 새로고침 버튼
+    TextView airView;
     double latitude; // 위도
     double longitude; // 경도
     LocationListener locationListener; // 위치변화 감지를 위한 LocationListener
@@ -57,13 +64,23 @@ public class Air extends Fragment {
     boolean isNetworkEnabled; // Network로 위치서비스 사용가능여부 판별
     private String key =
             "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
+    DataBase db;
 
     // fragment가 return될 때 실행되는 메소드
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
 
+        db = new DataBase(getActivity(), "Air", 1);
+        String st = db.select("Air");
+
         // 초기 화면을 "air"으로 설정
         final View view = inflater.inflate(R.layout.air, container, false);
+
+        airView = view.findViewById(R.id.airView);
+
+        if(st!=null) {
+            airView.setText(st);
+        }
 
         // 버튼 클릭시 실행 여부를 다시 확인하는 AlertDialog 생성
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
@@ -163,8 +180,7 @@ public class Air extends Fragment {
         // 권한이 허용되어 있으면
         else{
             // 위치정보 요청
-            locationManager =
-                    (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
+            locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
 
             // GPS 프로바이더 사용가능여부
             isGPSEnabled = Objects.requireNonNull(locationManager).isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -591,12 +607,11 @@ public class Air extends Fragment {
         }
 
         private URL url;
-        TextView airView;
 
         @Override
         protected String doInBackground(View... views) {
 
-            airView = views[0].findViewById(R.id.airView);
+
 
             buildURL();
             return(parse());
@@ -604,10 +619,43 @@ public class Air extends Fragment {
 
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
+
             if(s.length()!=0) {
-                airView.setText(s);
+
+                // 선언부
+                String st = s.split("\n")[1].split(" 기준")[0];
+                String dataTime = st.split("-")[0].split("")[2] + st.split("-")[0].split("")[3]
+                    + st.split("-")[1] + st.split("-")[2].split(" ")[0]
+                    + st.split("-")[2].split(" ")[1].split(":")[0]
+                    + st.split("-")[2].split(" ")[1].split(":")[1];
+                int pm10Value = Integer.parseInt(s.split("\n")[2].split(" ")[1]);
+                String pm10Grade1h = s.split("\n")[3].split(" ")[1];
+                int pm25Value = Integer.parseInt(s.split("\n")[4].split(" ")[1]);
+                String pm25Grade1h = s.split("\n")[5].split(" ")[1];
+                int now = Integer.parseInt(new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()));
+
+                int count = db.count("Air");
+                // 여기부터
+                if(count == 0) {
+                    Log.d(TAG,"맨 처음일때");
+                    // db에 입력
+                    db.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                }
+                else if(count == 1){
+                    Log.d(TAG,"데이터가 하나일때");
+                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                }
+                else{
+                    Log.d(TAG,"데이터가 두개 이상일때");
+                    while(db.count("Air")!=1 ) {
+                        db.delete("Air");
+                    }
+                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                }
+
+                airView.setText(db.select("Air"));
                 Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
-                sb.delete(0,sb.length());
+                sb.delete(0, sb.length());
             }
             else if(!(isGPSEnabled | isNetworkEnabled)){
                 Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();
