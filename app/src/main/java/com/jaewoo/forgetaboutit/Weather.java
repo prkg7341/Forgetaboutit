@@ -24,6 +24,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class Weather extends Fragment {
 
@@ -93,8 +94,8 @@ public class Weather extends Fragment {
         private BufferedReader rd;
         private StringBuilder sb = new StringBuilder();
         //private String line;
-        private String date = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        private String dateTime = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss:SSS").format(new Date());
+        private String date = new SimpleDateFormat("yyyyMMdd", Locale.KOREA).format(new Date());
+        private String dateTime = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss:SSS", Locale.KOREA).format(new Date());
         TextView dataView;
         TextView timeView;
 
