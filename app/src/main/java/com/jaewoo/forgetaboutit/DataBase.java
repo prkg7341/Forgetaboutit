@@ -45,7 +45,7 @@ public class DataBase extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public void insert(String table, String dataTime, int pm10Value, String pm10Grade1h, int pm25Value, String pm25Grade1h, int now){
+    public void insert(String table, String dataTime, String pm10Value, String pm10Grade1h, String pm25Value, String pm25Grade1h, String now){
 
         db = getWritableDatabase();
         db.execSQL("INSERT INTO " + table + " VALUES(null, '" + dataTime + "', '" + pm10Value + "', '" + pm10Grade1h + "', '"
@@ -60,9 +60,8 @@ public class DataBase extends SQLiteOpenHelper {
         try (Cursor c = db.rawQuery(
                 "SELECT * " +
                         " FROM " + table + ";", null)) {
-            Log.d(TAG, "cursor is " + (c.getCount() == 0));
+            Log.d(TAG, "입력된 데이터 개수: " + c.getCount());
             if (c.getCount() > 0) {
-                Log.d(TAG, "이거 실행 되나요?");
                 c.moveToFirst();
                 st = c.getString(1) + " " + c.getString(2) + " " + c.getString(3) + " "
                         + c.getString(4) + " " + c.getString(5) + " " + c.getString(6);
@@ -79,7 +78,7 @@ public class DataBase extends SQLiteOpenHelper {
         db = getReadableDatabase();
         int num;
         try (Cursor c = db.rawQuery(
-                "SELECT count (ID) " +
+                "SELECT * " +
                         " FROM " + table + ";", null)) {
             if (c != null && c.getCount() > 0) {
                 Log.d(TAG, "c.getCount() is " + c.getCount());
@@ -89,12 +88,11 @@ public class DataBase extends SQLiteOpenHelper {
                 num = 0;
             }
             db.close();
-            Log.d(TAG, "select count is " + c.getCount());
         }
         return num;
     }
 
-    public void update(String table, String dataTime, int pm10Value, String pm10Grade1h, int pm25Value, String pm25Grade1h, int now){
+    public void update(String table, String dataTime, String pm10Value, String pm10Grade1h, String pm25Value, String pm25Grade1h, String now){
         db = getWritableDatabase();
         db.execSQL("UPDATE " + table
                 + " SET 측정시간 = '" + dataTime + "', "
