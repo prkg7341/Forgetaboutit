@@ -6,6 +6,8 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -58,19 +60,23 @@ public class Air extends Fragment {
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS = 1; // 권한 구분
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 2; // 권한 구분
     private String locationAddress; // 주소 저장
-    private Location location; // 위치정보 저장
+    public static Location location; // 위치정보 저장
     private StringBuilder sb = new StringBuilder(); // TM좌표, 주소, 측정소 정보를 임시로 저장하고 미세먼지 정보를 출력하기 위한 문자열 생성 객체
     boolean isGPSEnabled; // GPS로 위치서비스 사용가능여부 판별
     boolean isNetworkEnabled; // Network로 위치서비스 사용가능여부 판별
     private String key =
             "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
     DataBase db;
+    SQLiteDatabase sqlDB;
 
     // fragment가 return될 때 실행되는 메소드
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
 
         db = new DataBase(getActivity(), "Air", 1);
+        if(db.count("Air")==0){
+            db.insert("Air", "입력된 ","데이터가 ","없습니다. ","새로고침 ","버튼을 ", "눌러주세요");
+        }
         String st = db.select("Air");
 
         // 초기 화면을 "air"으로 설정
@@ -113,7 +119,7 @@ public class Air extends Fragment {
                 .setNegativeButton("cancel", // NegativeButton의 이름을 "cancel"로 설정
                         new DialogInterface.OnClickListener() { // 리스너 생성
                             public void onClick( // AlertDialog에서 cancel을 선택하면
-                                    DialogInterface dialog, int id) {
+                                                 DialogInterface dialog, int id) {
                                 // 다이얼로그를 취소
                                 dialog.cancel();
                                 // "Update cancelled" 라는 Toast 메시지를 짧게 출력
@@ -154,7 +160,7 @@ public class Air extends Fragment {
                         "정확한 위치정보를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show();
                 // 권한 요청
                 ActivityCompat.requestPermissions(getActivity(), new String[]{
-                        Manifest.permission.ACCESS_COARSE_LOCATION},
+                                Manifest.permission.ACCESS_COARSE_LOCATION},
                         MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
             }
             // 이전에 사용자가 "ACCESS_FINE_LOCATION" 권한을 거부한 적이 있으면
@@ -165,7 +171,7 @@ public class Air extends Fragment {
                         "정확한 위치정보를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show();
                 // 권한 요청
                 ActivityCompat.requestPermissions(getActivity(), new String[]{
-                        Manifest.permission.ACCESS_FINE_LOCATION},
+                                Manifest.permission.ACCESS_FINE_LOCATION},
                         MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
             }
             // 권한 요청이 처음이라면
@@ -283,7 +289,7 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-    // getLocation 메소드에서 얻은 "location"을 인자로 주소를 얻는 메소드를 포함하는 클래스
+            // getLocation 메소드에서 얻은 "location"을 인자로 주소를 얻는 메소드를 포함하는 클래스
     class AddressAsyncTask extends AsyncTask<View, String, String> {
 
         // 생성자 선언
@@ -359,7 +365,7 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-    // AddressAsyncTask 클래스에서 얻은 주소를 인자로 TM좌표를 얻는 메소드를 포함하는 클래스
+            // AddressAsyncTask 클래스에서 얻은 주소를 인자로 TM좌표를 얻는 메소드를 포함하는 클래스
     class TMAsyncTask extends AsyncTask<View, String, String> {
 
         // 생성자 선언
@@ -406,7 +412,7 @@ public class Air extends Fragment {
                 url = new URL(urlBuilder.toString());
             }
             // 입출력 예외처리
-             catch (IOException e) {
+            catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -511,7 +517,7 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-    // TMAsyncTask 클래스에서 얻은 TM좌표를 인자로 측정소 정보를 얻는 메소드를 포함하는 클래스
+            // TMAsyncTask 클래스에서 얻은 TM좌표를 인자로 측정소 정보를 얻는 메소드를 포함하는 클래스
     class MeasuringStationAsyncTask extends AsyncTask<View, String, String>{
 
         // 생성자 선언
@@ -595,7 +601,7 @@ public class Air extends Fragment {
                 e.printStackTrace();
             }
             if(sb.length()!=0)
-            sb.deleteCharAt(sb.length()-1).append(" 측정소");
+                sb.deleteCharAt(sb.length()-1).append(" 측정소");
         }
     }
 
@@ -607,12 +613,12 @@ public class Air extends Fragment {
         }
 
         private URL url;
+        String now;
 
         @Override
         protected String doInBackground(View... views) {
 
             buildURL();
-
             updateData(parse());
 
             return(db.select("Air"));
@@ -621,8 +627,10 @@ public class Air extends Fragment {
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
 
-            airView.setText(s);
-            Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+            if(s!=null && s.split(" ")[5].compareTo(now+"")==0){
+                airView.setText(s);
+                Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+            }
         }
 
         private void buildURL() {
@@ -706,23 +714,28 @@ public class Air extends Fragment {
                             break;
 
                         case XmlPullParser.END_TAG:
-                            if (parser.getName().equals("item")) {
-                                switch(Integer.parseInt(pm10Grade1h)) {
-                                    case 1: pm10Grade1h = "좋음"; break;
-                                    case 2: pm10Grade1h = "보통"; break;
-                                    case 3: pm10Grade1h = "나쁨"; break;
-                                    case 4: pm10Grade1h = "매우나쁨"; break;
-                                }
-                                switch(Integer.parseInt(pm25Grade1h)) {
-                                    case 1: pm25Grade1h = "좋음"; break;
-                                    case 2: pm25Grade1h = "보통"; break;
-                                    case 3: pm25Grade1h = "나쁨"; break;
-                                    case 4: pm25Grade1h = "매우나쁨"; break;
-                                }
+                            try{
+                                if (parser.getName().equals("item")) {
+                                    switch(Integer.parseInt(pm10Grade1h)) {
+                                        case 1: pm10Grade1h = "좋음"; break;
+                                        case 2: pm10Grade1h = "보통"; break;
+                                        case 3: pm10Grade1h = "나쁨"; break;
+                                        case 4: pm10Grade1h = "매우나쁨"; break;
+                                    }
+                                    switch(Integer.parseInt(pm25Grade1h)) {
+                                        case 1: pm25Grade1h = "좋음"; break;
+                                        case 2: pm25Grade1h = "보통"; break;
+                                        case 3: pm25Grade1h = "나쁨"; break;
+                                        case 4: pm25Grade1h = "매우나쁨"; break;
+                                    }
                                     sb.append("\n").append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
                                             .append("\n미세먼지등급: ").append(pm10Grade1h)
                                             .append("\n초미세먼지농도: ").append(pm25Value)
                                             .append("\n초미세먼지등급: ").append(pm25Grade1h);
+                                }
+                            }
+                            catch(NumberFormatException e){
+                                //Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();//수정
                             }
                             break;
                     }
@@ -741,7 +754,9 @@ public class Air extends Fragment {
 
         private void updateData(String parsedString){
 
-            if(parsedString.length()!=0) {
+            now = new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date());
+
+            if(parsedString.length()!=0 && parsedString.split(" ")[1].compareTo("측정소")!=0) {
 
                 // 선언부
                 String st = parsedString.split("\n")[1].split(" 기준")[0];
@@ -749,20 +764,19 @@ public class Air extends Fragment {
                         + st.split("-")[1] + st.split("-")[2].split(" ")[0]
                         + st.split("-")[2].split(" ")[1].split(":")[0]
                         + st.split("-")[2].split(" ")[1].split(":")[1];
-                int pm10Value = Integer.parseInt(parsedString.split("\n")[2].split(" ")[1]);
+                String pm10Value = parsedString.split("\n")[2].split(" ")[1];
                 String pm10Grade1h = parsedString.split("\n")[3].split(" ")[1];
-                int pm25Value = Integer.parseInt(parsedString.split("\n")[4].split(" ")[1]);
+                String pm25Value = parsedString.split("\n")[4].split(" ")[1];
                 String pm25Grade1h = parsedString.split("\n")[5].split(" ")[1];
-                int now = Integer.parseInt(new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()));
 
                 int count = db.count("Air");
                 // 여기부터
-                if(count == 0) {
+                /*if(count == 0) {
                     Log.d(TAG,"맨 처음일때");
                     // db에 입력
                     db.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
-                else if(count == 1){
+                else*/ if(count == 1){
                     Log.d(TAG,"데이터가 하나일때");
                     db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
@@ -777,10 +791,10 @@ public class Air extends Fragment {
                 sb.delete(0, sb.length());
             }
             else if(!(isGPSEnabled | isNetworkEnabled)){
-                Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();
+                //Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();//수정
             }
             else{
-                Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();
+                //Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();//수정
             }
         }
     }
