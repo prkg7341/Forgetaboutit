@@ -611,58 +611,18 @@ public class Air extends Fragment {
         @Override
         protected String doInBackground(View... views) {
 
-
-
             buildURL();
-            return(parse());
+
+            updateData(parse());
+
+            return(db.select("Air"));
         }
 
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
 
-            if(s.length()!=0) {
-
-                // 선언부
-                String st = s.split("\n")[1].split(" 기준")[0];
-                String dataTime = st.split("-")[0].split("")[2] + st.split("-")[0].split("")[3]
-                    + st.split("-")[1] + st.split("-")[2].split(" ")[0]
-                    + st.split("-")[2].split(" ")[1].split(":")[0]
-                    + st.split("-")[2].split(" ")[1].split(":")[1];
-                int pm10Value = Integer.parseInt(s.split("\n")[2].split(" ")[1]);
-                String pm10Grade1h = s.split("\n")[3].split(" ")[1];
-                int pm25Value = Integer.parseInt(s.split("\n")[4].split(" ")[1]);
-                String pm25Grade1h = s.split("\n")[5].split(" ")[1];
-                int now = Integer.parseInt(new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()));
-
-                int count = db.count("Air");
-                // 여기부터
-                if(count == 0) {
-                    Log.d(TAG,"맨 처음일때");
-                    // db에 입력
-                    db.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
-                }
-                else if(count == 1){
-                    Log.d(TAG,"데이터가 하나일때");
-                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
-                }
-                else{
-                    Log.d(TAG,"데이터가 두개 이상일때");
-                    while(db.count("Air")!=1 ) {
-                        db.delete("Air");
-                    }
-                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
-                }
-
-                airView.setText(db.select("Air"));
-                Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
-                sb.delete(0, sb.length());
-            }
-            else if(!(isGPSEnabled | isNetworkEnabled)){
-                Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();
-            }
-            else{
-                Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();
-            }
+            airView.setText(s);
+            Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
         }
 
         private void buildURL() {
@@ -777,6 +737,51 @@ public class Air extends Fragment {
                 e.printStackTrace();
             }
             return sb.toString();
+        }
+
+        private void updateData(String parsedString){
+
+            if(parsedString.length()!=0) {
+
+                // 선언부
+                String st = parsedString.split("\n")[1].split(" 기준")[0];
+                String dataTime = st.split("-")[0].split("")[2] + st.split("-")[0].split("")[3]
+                        + st.split("-")[1] + st.split("-")[2].split(" ")[0]
+                        + st.split("-")[2].split(" ")[1].split(":")[0]
+                        + st.split("-")[2].split(" ")[1].split(":")[1];
+                int pm10Value = Integer.parseInt(parsedString.split("\n")[2].split(" ")[1]);
+                String pm10Grade1h = parsedString.split("\n")[3].split(" ")[1];
+                int pm25Value = Integer.parseInt(parsedString.split("\n")[4].split(" ")[1]);
+                String pm25Grade1h = parsedString.split("\n")[5].split(" ")[1];
+                int now = Integer.parseInt(new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()));
+
+                int count = db.count("Air");
+                // 여기부터
+                if(count == 0) {
+                    Log.d(TAG,"맨 처음일때");
+                    // db에 입력
+                    db.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                }
+                else if(count == 1){
+                    Log.d(TAG,"데이터가 하나일때");
+                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                }
+                else{
+                    Log.d(TAG,"데이터가 두개 이상일때");
+                    while(db.count("Air")!=1 ) {
+                        db.delete("Air");
+                    }
+                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                }
+
+                sb.delete(0, sb.length());
+            }
+            else if(!(isGPSEnabled | isNetworkEnabled)){
+                Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();
+            }
+            else{
+                Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();
+            }
         }
     }
 }
