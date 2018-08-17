@@ -6,8 +6,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -52,7 +50,7 @@ public class Air extends Fragment {
 
     // field 선언부
     Button renew; // 새로고침 버튼
-    TextView airView;
+    TextView airView; // DB에 저장된 내용 출력할 TextView
     double latitude; // 위도
     double longitude; // 경도
     LocationListener locationListener; // 위치변화 감지를 위한 LocationListener
@@ -66,14 +64,15 @@ public class Air extends Fragment {
     boolean isNetworkEnabled; // Network로 위치서비스 사용가능여부 판별
     private String key =
             "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
-    DataBase db;
-    SQLiteDatabase sqlDB;
+    DataBase db; // DataBase 클래스 객체
 
     // fragment가 return될 때 실행되는 메소드
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
 
+        // DB가 존재하지 않으면 생성
         db = new DataBase(getActivity(), "Air", 1);
+        // DB가 처음 생성되어 데이터가 없으면, 새로고침을 눌러달라는 메시지 출력
         if(db.count("Air")==0){
             db.insert("Air", "입력된 ","데이터가 ","없습니다. ","새로고침 ","버튼을 ", "눌러주세요");
         }
@@ -82,8 +81,10 @@ public class Air extends Fragment {
         // 초기 화면을 "air"으로 설정
         final View view = inflater.inflate(R.layout.air, container, false);
 
+        // airView 초기화
         airView = view.findViewById(R.id.airView);
 
+        // 데이터가 존재하면 airView에 데이터 출력
         if(st!=null) {
             airView.setText(st);
         }
@@ -289,7 +290,7 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-            // getLocation 메소드에서 얻은 "location"을 인자로 주소를 얻는 메소드를 포함하는 클래스
+    // getLocation 메소드에서 얻은 "location"을 인자로 주소를 얻는 메소드를 포함하는 클래스
     class AddressAsyncTask extends AsyncTask<View, String, String> {
 
         // 생성자 선언
@@ -305,7 +306,7 @@ public class Air extends Fragment {
             // Locale은 어플리케이션이 실행되는 지역을 나타내며, 이 어플리케이션은 한국 내에서만 실행될 예정이므로
             // KOREA로 한정하여 메소드를 실행한다.
             locationAddress = getAddressFromLocation(location, Locale.KOREA);
-            return locationAddress;
+            return null; // onPostExecute 메소드를 사용하지 않으므로 return 값이 필요하지 않다.
         }
 
         // 위치를 이용해 주소를 구하는 메소드
@@ -365,7 +366,7 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-            // AddressAsyncTask 클래스에서 얻은 주소를 인자로 TM좌표를 얻는 메소드를 포함하는 클래스
+    // AddressAsyncTask 클래스에서 얻은 주소를 인자로 TM좌표를 얻는 메소드를 포함하는 클래스
     class TMAsyncTask extends AsyncTask<View, String, String> {
 
         // 생성자 선언
@@ -417,6 +418,7 @@ public class Air extends Fragment {
             }
         }
 
+        // 공공데이터 파싱을 위한 메소드
         private void parse() {
 
             // xml 형태의 데이터를 파싱하는 XmlPullParser 객체 생성
@@ -517,7 +519,7 @@ public class Air extends Fragment {
     }
 
     @SuppressLint("StaticFieldLeak")
-            // TMAsyncTask 클래스에서 얻은 TM좌표를 인자로 측정소 정보를 얻는 메소드를 포함하는 클래스
+    // TMAsyncTask 클래스에서 얻은 TM좌표를 인자로 측정소 정보를 얻는 메소드를 포함하는 클래스
     class MeasuringStationAsyncTask extends AsyncTask<View, String, String>{
 
         // 생성자 선언
@@ -528,234 +530,328 @@ public class Air extends Fragment {
         // 네트워크에 연결할 URL 선언
         private URL url;
 
+        // doInBackground는 상위 캘래스의 view를 인자로 받아 AsyncTask 클래스의 메인 메소드 역할을 하며
+        // UI와 관련되지 않은 작업들을 포함한다. (UI 관련 작업은 onPostExecute 메소드에서 실행)
         @Override
         protected String doInBackground(View... views) {
 
-            buildURL();
-            sb.delete(0, sb.length());
-            parse();
-            return null;
+            buildURL(); // URL 생성
+            sb.delete(0, sb.length()); // parse 메소드에서 사용하기 위해 StringBuilder에서 TM 좌표 데이터 삭제
+            parse(); // 파싱
+            return null; // onPostExecute 메소드를 사용하지 않으므로 return 값이 필요하지 않다.
         }
 
+        // URL을 생성하는 메소드
         private void buildURL() {
 
+            // 공공데이터 API를 사용할 때 필요한 형태로 URL을 생성하기 위해 StringBuilder 생성
             StringBuilder urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getNearbyMsrstnList"); //URL
+            // encode 메소드를 실행할 때 필수적인 입출력 예외처리를 해주기 위해 try-catch 문 사용
+            // "UTF-8"은 유니코드를 위한 가변 길이 문자 인코딩 방식 중 하나 (공공데이터 API 요구사항)
             try {
+                // 각각 항목명에 대한 데이터를 입력해준다.
+                // 서비스 키 입력
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
-                        .append("=").append(key); //서비스 키
+                        .append("=").append(key);
+                // TM 좌표 데이터가 StringBuilder에 입력되어있으면
                 if(sb.toString().split("").length >= 2) {
+                    // TM X좌표 입력
                     urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8"))
                             .append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
+                    // TM Y좌표 입력
                     urlBuilder.append("&").append(URLEncoder.encode("tmY", "UTF-8"))
                             .append("=").append(URLEncoder.encode(sb.toString().split(" ")[1], "UTF-8")); //페이지 수
                 }
+                // url 저장
                 url = new URL(urlBuilder.toString());
-
-            } catch (IOException e) {
+            }
+            // 입출력 예외처리
+            catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+        // 공공데이터 파싱을 위한 메소드
         private void parse() {
 
+            // xml 형태의 데이터를 파싱하는 XmlPullParser 객체 생성
             XmlPullParser parser;
+            // 파싱의 작업상태를 나타내는 변수 선언
             int parserEvent;
 
+            // 파싱을 할 때 조건문에 필요한 데이터 선언 및 초기화
             boolean bstationName = false;
             String stationName = null;
 
             try {
+                // XmlPullParserFactory 객체 생성 (XmlPullParser 객체 초기화를 위함)
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                // XmlPullParser 객체 초기화 (파싱 객체 선언의 약속된 형태)
                 parser = factory.newPullParser();
+                // 파싱의 작업상태 초기화
                 parserEvent = parser.getEventType();
-
+                // 파싱할 데이터를 가져올 URL 스트림 생성
                 parser.setInput(url.openStream(), null);
 
+                // 파싱 작업이 끝날때까지, 한번만 실행되도록
                 while (parserEvent != XmlPullParser.END_DOCUMENT && (sb.length()==0)) {
+                    // 파싱의 작업상태에 따라 구분
                     switch (parserEvent) {
-                        case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
-                            if (parser.getName().equals("stationName")) { //stationName(측정소 이름) 만나면 내용을 받을수 있게 하자
+                        // parser가 시작 태그를 만날 때 실행
+                        case XmlPullParser.START_TAG:
+                            // parser가 stationName(측정소 이름)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("stationName")) {
                                 bstationName = true;
                             }
                             break;
 
-                        case XmlPullParser.TEXT://parser가 내용에 접근했을때
-                            if (bstationName) { //bsggName true일 때 태그의 내용을 저장.
+                        // parser가 내용에 접근할 때 실행
+                        case XmlPullParser.TEXT:
+                            // bstationName이 true일 때 태그의 내용을 저장.
+                            if (bstationName) {
                                 stationName = parser.getText();
                                 bstationName = false;
                             }
                             break;
+
+                        // parser가 끝 태그를 만날 때 실행
                         case XmlPullParser.END_TAG:
+                            // parser가 "item" 태그를 만나면 측정소 이름 저장
                             if (parser.getName().equals("item")) {
-                                sb.append(stationName).append(" ");
+                                sb.append(stationName);
                             }
                             break;
                     }
                     try {
+                        // parser를 다음 데이터로 이동
                         parserEvent = parser.next();
-                    } catch (XmlPullParserException | IOException e) {
+                    }
+                    // xml 파싱과 입출력 관련 예외 처리
+                    catch (XmlPullParserException | IOException e) {
                         e.printStackTrace();
                     }
                 }
-            } catch (XmlPullParserException | IOException e) {
+            }
+            // xml 파싱과 입출력 관련 예외 처리
+            catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
-            if(sb.length()!=0)
-                sb.deleteCharAt(sb.length()-1).append(" 측정소");
         }
     }
 
+    // MeasuringStationAsyncTask 클래스에서 얻은  측정소 정보를 인자로 미세먼지 데이터를 얻는 클래스
     @SuppressLint("StaticFieldLeak")
     class AirAsyncTask extends AsyncTask<View, String, String>{
 
+        // 생성자 선언
         AirAsyncTask(){
-
+            // 아무 기능도 없지만, 안드로이드에서 생성자 선언을 해주지 않을 때, 오류가 발생할 가능성이 있어 기능없이 선언해준다.
         }
 
+        // 네트워크에 연결할 URL 선언
         private URL url;
+        // 현재 시간을 저장할 String 변수 선언
         String now;
 
+        // doInBackground는 상위 캘래스의 view를 인자로 받아 AsyncTask 클래스의 메인 메소드 역할을 하며
+        // UI와 관련되지 않은 작업들을 포함한다. (UI 관련 작업은 onPostExecute 메소드에서 실행)
         @Override
         protected String doInBackground(View... views) {
 
-            buildURL();
-            updateData(parse());
+            buildURL(); // URL 생성
+            updateDB(parse()); // 파싱한 문자열을 이용해 데이터를 업데이트 한다.
 
-            return(db.select("Air"));
+            return(db.select("Air")); // SQL SELECT 문을 통해 정보를 읽어온다.
         }
 
+        // doInBackground 메소드에서 리턴한 값을 인자로 UI를 수정하는 메소드
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
 
+            // 리턴받은 값이 올바른 형태로 저장되어 있을 때
             if(s!=null && s.split(" ")[5].compareTo(now+"")==0){
+                // TextView에 리턴받은 값을 출력한다.
                 airView.setText(s);
+                // 리턴받은 값을 출력한 후, Updated successfully 메시지를 보여준다.
                 Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
             }
         }
 
+        // URL을 생성하는 메소드
         private void buildURL() {
 
+            // 공공데이터 API를 사용할 때 필요한 형태로 URL을 생성하기 위해 StringBuilder 생성
             StringBuilder urlBuilder = new StringBuilder("http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty"); //URL
+            // encode 메소드를 실행할 때 필수적인 입출력 예외처리를 해주기 위해 try-catch 문 사용
+            // "UTF-8"은 유니코드를 위한 가변 길이 문자 인코딩 방식 중 하나 (공공데이터 API 요구사항)
             try {
+                // 각각 항목명에 대한 데이터를 입력해준다.
+                // 서비스 키 입력
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
-                        .append("=").append(key); //서비스 키
+                        .append("=").append(key);
+                // 측정소명 입력
                 urlBuilder.append("&").append(URLEncoder.encode("stationName", "UTF-8"))
-                        .append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //측정소명
+                        .append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8"));
+                // 데이터 기간 입력
                 urlBuilder.append("&").append(URLEncoder.encode("dataTerm", "UTF-8"))
-                        .append("=").append(URLEncoder.encode("DAILY", "UTF-8")); //데이터기간
+                        .append("=").append(URLEncoder.encode("DAILY", "UTF-8"));
+                // 버전 입력
                 urlBuilder.append("&").append(URLEncoder.encode("ver", "UTF-8"))
-                        .append("=").append(URLEncoder.encode("1.3", "UTF-8")); //버전
+                        .append("=").append(URLEncoder.encode("1.3", "UTF-8"));
+                // 받아올 데이터 개수 입력
                 urlBuilder.append("&").append(URLEncoder.encode("numOfRows", "UTF-8"))
-                        .append("=").append(URLEncoder.encode("1", "UTF-8")); //받아올 데이터 개수
+                        .append("=").append(URLEncoder.encode("1", "UTF-8"));
+                // url 저장
                 url = new URL(urlBuilder.toString());
 
-            } catch (IOException e) {
+            }
+            // 입출력 예외처리
+            catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+        // 공공데이터 파싱을 위한 메소드
         private String parse() {
 
+            // xml 형태의 데이터를 파싱하는 XmlPullParser 객체 생성
             XmlPullParser parser;
+            // 파싱의 작업상태를 나타내는 변수 선언
             int parserEvent;
+
+            // 파싱을 할 때 조건문에 필요한 데이터 선언 및 초기화
             boolean bdataTime = false; boolean bpm10Value = false; boolean bpm10Grade1h = false;
             boolean bpm25Value = false; boolean bpm25Grade1h = false;
             String dataTime = null; String pm10Value = null; String pm10Grade1h = null;
             String pm25Value = null; String pm25Grade1h = null;
 
             try {
+                // XmlPullParserFactory 객체 생성 (XmlPullParser 객체 초기화를 위함)
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+                // XmlPullParser 객체 초기화 (파싱 객체 선언의 약속된 형태)
                 parser = factory.newPullParser();
+                // 파싱의 작업상태 초기화
                 parserEvent = parser.getEventType();
-
+                // 파싱할 데이터를 가져올 URL 스트림 생성
                 parser.setInput(url.openStream(), null);
 
+                // 파싱 작업이 끝날때까지
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
+                    // 파싱의 작업상태에 따라 구분
                     switch (parserEvent) {
-                        case XmlPullParser.START_TAG://parser가 시작 태그를 만나면 실행
-                            if (parser.getName().equals("dataTime")) { //dataTime(측정시간) 만나면 내용을 받을수 있게 하자
+                        // parser가 시작 태그를 만날 때 실행
+                        case XmlPullParser.START_TAG:
+                            // parser가 dataTime(측정시간)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("dataTime")) {
                                 bdataTime = true;
                             }
-                            if (parser.getName().equals("pm10Value")) { //pm10Value(미세먼지 농도) 만나면 내용을 받을수 있게 하자
+                            // parser가 pm10Value(미세먼지농도)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("pm10Value")) {
                                 bpm10Value = true;
                             }
-                            if (parser.getName().equals("pm10Grade1h")) { //pm10Grade1h(미세먼지 등급) 만나면 내용을 받을수 있게 하자
+                            // parser가 pm10Grade1h(미세먼지등급)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("pm10Grade1h")) {
                                 bpm10Grade1h = true;
                             }
-                            if (parser.getName().equals("pm25Value")) { //pm25Value(초미세먼지 농도) 만나면 내용을 받을수 있게 하자
+                            // parser가 pm25Value(초미세먼지농도)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("pm25Value")) {
                                 bpm25Value = true;
                             }
-                            if (parser.getName().equals("pm25Grade1h")) { //pm25Grade1h(초미세먼지 등급) 만나면 내용을 받을수 있게 하자
+                            // parser가 pm25Grade1h(초미세먼지등급)을 만나면 내용 저장이 가능하도록
+                            if (parser.getName().equals("pm25Grade1h")) {
                                 bpm25Grade1h = true;
                             }
                             break;
 
-                        case XmlPullParser.TEXT://parser가 내용에 접근했을때
-                            if (bdataTime) { //bsggName true일 때 태그의 내용을 저장.
+                        // parser가 내용에 접근할 때 실행
+                        case XmlPullParser.TEXT:
+                            // bdataTime이 true일 때 태그의 내용을 저장.
+                            if (bdataTime) {
                                 dataTime = parser.getText();
                                 bdataTime = false;
                             }
-                            if (bpm10Value) { //bsggName true일 때 태그의 내용을 저장.
+                            // bpm10Value가 true일 때 태그의 내용을 저장.
+                            if (bpm10Value) {
                                 pm10Value = parser.getText();
                                 bpm10Value = false;
                             }
-                            if (bpm10Grade1h) { //bsggName true일 때 태그의 내용을 저장.
+                            // bpm10Grade1h가 true일 때 태그의 내용을 저장.
+                            if (bpm10Grade1h) {
                                 pm10Grade1h = parser.getText();
                                 bpm10Grade1h = false;
                             }
-                            if (bpm25Value) { //bsggName true일 때 태그의 내용을 저장.
+                            // bpm25Value가 true일 때 태그의 내용을 저장.
+                            if (bpm25Value) {
                                 pm25Value = parser.getText();
                                 bpm25Value = false;
                             }
-                            if (bpm25Grade1h) { //bsggName true일 때 태그의 내용을 저장.
+                            // bpm25Grade1h가 true일 때 태그의 내용을 저장.
+                            if (bpm25Grade1h) {
                                 pm25Grade1h = parser.getText();
                                 bpm25Grade1h = false;
                             }
                             break;
 
+                        // parser가 끝 태그를 만날 때 실행
                         case XmlPullParser.END_TAG:
                             try{
+                                // parser가 "item" 태그를 만나면 측정소 이름 저장
                                 if (parser.getName().equals("item")) {
+                                    // 미세먼지등급에 따른 분류 (공공데이터 자체 기준)
                                     switch(Integer.parseInt(pm10Grade1h)) {
                                         case 1: pm10Grade1h = "좋음"; break;
                                         case 2: pm10Grade1h = "보통"; break;
                                         case 3: pm10Grade1h = "나쁨"; break;
                                         case 4: pm10Grade1h = "매우나쁨"; break;
                                     }
+                                    // 초미세먼지등급에 따른 분류 (공공데이터 자체 기준)
                                     switch(Integer.parseInt(pm25Grade1h)) {
                                         case 1: pm25Grade1h = "좋음"; break;
                                         case 2: pm25Grade1h = "보통"; break;
                                         case 3: pm25Grade1h = "나쁨"; break;
                                         case 4: pm25Grade1h = "매우나쁨"; break;
                                     }
+                                    // StringBuilder로 DB에 입력할 데이터 생성
                                     sb.append("\n").append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
                                             .append("\n미세먼지등급: ").append(pm10Grade1h)
                                             .append("\n초미세먼지농도: ").append(pm25Value)
                                             .append("\n초미세먼지등급: ").append(pm25Grade1h);
                                 }
                             }
+                            // NumberFormatException 예외 처리
                             catch(NumberFormatException e){
                                 //Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();//수정
                             }
                             break;
                     }
                     try {
+                        // parser를 다음 데이터로 이동
                         parserEvent = parser.next();
-                    } catch (XmlPullParserException | IOException e) {
+                    }
+                    // xml 파싱과 입출력 관련 예외 처리
+                    catch (XmlPullParserException | IOException e) {
                         e.printStackTrace();
                         break;
                     }
                 }
-            } catch (XmlPullParserException | IOException e) {
+            }
+            // xml 파싱과 입출력 관련 예외 처리
+            catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
+            // StringBuidler로 만든 데이터를 String 형으로 리턴
+            // updateData 메소드의 인자로 쓰인다.
             return sb.toString();
         }
 
-        private void updateData(String parsedString){
+        // parse 메소드에서 리턴받은 값을 인자로 DB를 업데이트하는 메소드
+        private void updateDB(String parsedString){
 
+            Log.d(TAG,parsedString);
+            // 필드에서 선언된 now값을 현재시간으로 초기화
             now = new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date());
 
+            // 리턴받은 값에 데이터가 정확한 형태로 저장되어 있을 때
             if(parsedString.length()!=0 && parsedString.split(" ")[1].compareTo("측정소")!=0) {
 
                 // 선언부
@@ -769,30 +865,37 @@ public class Air extends Fragment {
                 String pm25Value = parsedString.split("\n")[4].split(" ")[1];
                 String pm25Grade1h = parsedString.split("\n")[5].split(" ")[1];
 
+                // DB에 입력된 데이터의 개수를 구한다.
                 int count = db.count("Air");
-                // 여기부터
-                /*if(count == 0) {
-                    Log.d(TAG,"맨 처음일때");
-                    // db에 입력
+                // 데이터 개수에 따라
+                // 데이터가 없을 때 (데이터가 제대로 입력되지 않았을 때)
+                if(count == 0) {
+                    // 데이터 입력
                     db.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
-                else*/ if(count == 1){
-                    Log.d(TAG,"데이터가 하나일때");
+                // 데이터가 하나일때 (일반적인 경우)
+                else if(count == 1){
+                    // 데이터 수정
                     db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
+                // 데이터가 두개 이상일때 (오류가 발생했을 경우)
                 else{
-                    Log.d(TAG,"데이터가 두개 이상일때");
+                    // 데이터를 하나만 남기고 지운 뒤
                     while(db.count("Air")!=1 ) {
                         db.delete("Air");
                     }
+                    // 데이터를 수정한다.
                     db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
 
+                // StringBuilder에 저장되어있던 미세먼지 데이터를 삭제한다.
                 sb.delete(0, sb.length());
             }
+            // 위치서비스를 이용할 수 없을 경우
             else if(!(isGPSEnabled | isNetworkEnabled)){
                 //Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();//수정
             }
+            // API 서버 오류로 데이터를 가져올수 없을 경우
             else{
                 //Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();//수정
             }
