@@ -31,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
         // 페이지 전환에 필요한 리스너 생성
         mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
         tabLayout.addOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(mViewPager));
+
+        final DataBase database = new DataBase(this, "FAI", 1);
     }
 
     // 각 페이지별로 fragment를 return할 어댑터의 클래스
