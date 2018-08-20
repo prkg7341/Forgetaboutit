@@ -2,10 +2,9 @@
     <string name="app_name">Forget about it!</string>
     <string name="action_settings">Settings</string>
     <string name="section_format">Hello World from section: %1$d</string>
-    <string name="title_activity_main2">Main2Activity</string>
+    <string name="title_activity_main">MainActivity</string>
     <string name="tab_text_1">Tab 1</string>
     <string name="tab_text_2">Tab 2</string>
-    <string name="tab_text_3">Tab 3</string>
     <string name="main">main</string>
     <string name="setting">setting</string>
     <string name="success">success</string>
@@ -14,4 +13,23 @@
     <string name="frag">frag</string>
     <string name="bt">Button</string>
     <string name="get_api_information">get API information</string>
+    <string-array name="sido">
+        <item>강원도</item>
+        <item>경기도</item>
+        <item>경상남도</item>
+        <item>경상북도</item>
+        <item>광주광역시</item>
+        <item>대구광역시</item>
+        <item>대전광역시</item>
+        <item>부산광역시</item>
+        <item>서울특별시</item>
+        <item>세종특별자치시</item>
+        <item>울산광역시</item>
+        <item>인천광역시</item>
+        <item>전라남도</item>
+        <item>전라북도</item>
+        <item>제주특별자치도</item>
+        <item>충청남도</item>
+        <item>충청북도</item>
+    </string-array>
 </resources>
