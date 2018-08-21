@@ -44,9 +44,9 @@ public class DataBase extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE SiSiU " +
                 "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "법정동코드 TEXT, " +
-                "시도명 TEXT," +
-                "시군구명 TEXT, " +
-                "읍면동명 Time);");
+                "시도 TEXT," +
+                "시군구 TEXT, " +
+                "읍면동 Time);");
         Log.d(TAG, "Table 생성");
         // 필요한 테이블들 create
     }
@@ -97,6 +97,56 @@ public class DataBase extends SQLiteOpenHelper {
             }
         }
         db.close();
+        Log.d(TAG, "select is " + st);
+        return st;
+    }
+
+    public String select(String table, String sido){
+        db = getReadableDatabase();
+        String st;
+        StringBuilder sb = new StringBuilder();
+        try (Cursor c = db.rawQuery(
+                "SELECT 시군구" +
+                        " FROM " + table +
+                        " WHERE 시도 = '" + sido + "';", null)) { // default 강원도
+            Log.d(TAG, "입력된 데이터 개수: " + c.getCount());
+
+            if (c.getCount() > 0) {
+                c.moveToFirst();
+               do {
+                    sb.append(c.getString(0)).append("-");
+                } while(c.moveToNext());
+            }
+            sb.deleteCharAt(sb.length()-1);
+            st = sb.toString();
+            db.close();
+        }
+        Log.d(TAG, "select is " + st);
+        return st;
+    }
+
+    public String select(String table, String sido, String sgg){
+        db = getReadableDatabase();
+        String st;
+        StringBuilder sb = new StringBuilder();
+        try (Cursor c = db.rawQuery(
+                "SELECT 읍면동" +
+                        " FROM " + table +
+                        " WHERE 시도 = '" + sido +
+                        "' AND 시군구 = '" + sgg + "';", null)) { // default 강원도
+            Log.d(TAG, "입력된 데이터 개수: " + c.getCount());
+
+            if (c.getCount() > 0) {
+                c.moveToFirst();
+                do {
+                    sb.append(c.getString(0)).append("-");
+                } while(c.moveToNext());
+                sb.deleteCharAt(sb.length()-1);
+            }
+
+            st = sb.toString();
+            db.close();
+        }
         Log.d(TAG, "select is " + st);
         return st;
     }
