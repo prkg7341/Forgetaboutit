@@ -3,9 +3,11 @@ package com.jaewoo.forgetaboutit;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
@@ -21,6 +23,8 @@ public class Setting extends Fragment {
     }
 
     DataBase dataBase;
+    static String st1;
+    static String st2;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
@@ -32,14 +36,56 @@ public class Setting extends Fragment {
         Resources res = getResources();
         String[] sido = res.getStringArray(R.array.sido);
 
-        Spinner spinner = (Spinner) view.findViewById(R.id.spinner);
-        ArrayAdapter aa = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1,sido);
+        final Spinner spinner = (Spinner) view.findViewById(R.id.spinner);
+        final Spinner spinner2 = (Spinner) view.findViewById(R.id.spinner2);
+        final Spinner spinner3 = (Spinner) view.findViewById(R.id.spinner3);
 
-
+        String st3;
 
         if(dataBase.count("SiSi")<250 || dataBase.count("SiSiU")<5048) {
             copyExcelDataToDatabase();
         }
+
+        final ArrayAdapter arrayAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, sido);
+        spinner.setAdapter(arrayAdapter);
+
+        st1 = spinner.getSelectedItem().toString();
+
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                st1 = spinner.getSelectedItem().toString();
+                ArrayAdapter arrayAdapter2 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSi", st1).split("-"));
+                spinner2.setAdapter(arrayAdapter2);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        spinner2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                st2 = spinner2.getSelectedItem().toString();
+                ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSiU", st1, st2).split("-"));
+                spinner3.setAdapter(arrayAdapter3);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+
+        //ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, );
+        //spinner3.setAdapter(arrayAdapter3);
+
+
 
         return view;
     }
@@ -48,7 +94,7 @@ public class Setting extends Fragment {
 
         Workbook workbook1 = null;
         Workbook workbook2 = null;
-        Sheet sheet;
+        Sheet sheet = null;
 
         try {
             InputStream is1 = getResources().getAssets().open("2.xls");
@@ -56,7 +102,9 @@ public class Setting extends Fragment {
             workbook1 = Workbook.getWorkbook(is1);
             workbook2 = Workbook.getWorkbook(is2);
 
-            sheet = workbook1.getSheet(0);
+            if(dataBase.count("SiSi")<250) {
+                sheet = workbook1.getSheet(0);
+            }
 
             if (sheet != null) {
 
@@ -74,7 +122,9 @@ public class Setting extends Fragment {
                 dataBase.close();
             }
 
-            sheet = workbook2.getSheet(0);
+            if(dataBase.count("SiSiU")<5048) {
+                sheet = workbook2.getSheet(0);
+            }
 
             if (sheet != null) {
 
