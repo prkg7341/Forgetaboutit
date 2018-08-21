@@ -14,7 +14,15 @@ public class DataBase extends SQLiteOpenHelper {
         super(context, name, null, version);
     }
 
+    private static DataBase dataBase = null;
     private SQLiteDatabase db;
+
+    public static DataBase openDB(Context context){
+        if(dataBase==null){
+            dataBase = new DataBase(context, "DB", 1);
+        }
+        return dataBase;
+    }
 
     // 최초에 데이터베이스가 없을경우, 데이터베이스 생성을 위해 호출됨
     // 테이블 생성하는 코드를 작성한다
@@ -29,6 +37,16 @@ public class DataBase extends SQLiteOpenHelper {
                 "초미세먼지농도 TEXT, " +
                 "초미세먼지등급 TEXT, " +
                 "갱신시간 Time);");
+        db.execSQL("CREATE TABLE SiSi " +
+                "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "시도 TEXT, " +
+                "시군구 TEXT);");
+        db.execSQL("CREATE TABLE SiSiU " +
+                "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "법정동코드 TEXT, " +
+                "시도 TEXT," +
+                "시군구 TEXT, " +
+                "읍면동 Time);");
         Log.d(TAG, "Table 생성");
         // 필요한 테이블들 create
     }
@@ -50,7 +68,18 @@ public class DataBase extends SQLiteOpenHelper {
         db = getWritableDatabase();
         db.execSQL("INSERT INTO " + table + " VALUES(null, '" + dataTime + "', '" + pm10Value + "', '" + pm10Grade1h + "', '"
                 + pm25Value + "', '" + pm25Grade1h + "', '" + now + "');");
-        Log.d(TAG, "Data was inserted");
+        db.close();
+    }
+
+    public void insert(String table, String sido, String sgg){
+        db = getWritableDatabase();
+        db.execSQL("INSERT INTO " + table + " VALUES(null, '" + sido + "', '" + sgg + "');");
+        db.close();
+    }
+
+    public void insert(String table, String num, String sido, String sgg, String umd){
+        db = getWritableDatabase();
+        db.execSQL("INSERT INTO " + table + " VALUES(null, '" + num + "', '" + sido + "', '" + sgg + "', '" + umd + "');");
         db.close();
     }
 
@@ -68,6 +97,56 @@ public class DataBase extends SQLiteOpenHelper {
             }
         }
         db.close();
+        Log.d(TAG, "select is " + st);
+        return st;
+    }
+
+    public String select(String table, String sido){
+        db = getReadableDatabase();
+        String st;
+        StringBuilder sb = new StringBuilder();
+        try (Cursor c = db.rawQuery(
+                "SELECT 시군구" +
+                        " FROM " + table +
+                        " WHERE 시도 = '" + sido + "';", null)) { // default 강원도
+            Log.d(TAG, "입력된 데이터 개수: " + c.getCount());
+
+            if (c.getCount() > 0) {
+                c.moveToFirst();
+               do {
+                    sb.append(c.getString(0)).append("-");
+                } while(c.moveToNext());
+            }
+            sb.deleteCharAt(sb.length()-1);
+            st = sb.toString();
+            db.close();
+        }
+        Log.d(TAG, "select is " + st);
+        return st;
+    }
+
+    public String select(String table, String sido, String sgg){
+        db = getReadableDatabase();
+        String st;
+        StringBuilder sb = new StringBuilder();
+        try (Cursor c = db.rawQuery(
+                "SELECT 읍면동" +
+                        " FROM " + table +
+                        " WHERE 시도 = '" + sido +
+                        "' AND 시군구 = '" + sgg + "';", null)) { // default 강원도
+            Log.d(TAG, "입력된 데이터 개수: " + c.getCount());
+
+            if (c.getCount() > 0) {
+                c.moveToFirst();
+                do {
+                    sb.append(c.getString(0)).append("-");
+                } while(c.moveToNext());
+                sb.deleteCharAt(sb.length()-1);
+            }
+
+            st = sb.toString();
+            db.close();
+        }
         Log.d(TAG, "select is " + st);
         return st;
     }

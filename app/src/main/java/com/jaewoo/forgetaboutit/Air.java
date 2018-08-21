@@ -64,19 +64,19 @@ public class Air extends Fragment {
     boolean isNetworkEnabled; // Network로 위치서비스 사용가능여부 판별
     private String key =
             "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
-    DataBase db; // DataBase 클래스 객체
+    DataBase dataBase; // DataBase 클래스 객체
 
     // fragment가 return될 때 실행되는 메소드
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
 
         // DB가 존재하지 않으면 생성
-        db = new DataBase(getActivity(), "Air", 1);
+        dataBase = DataBase.openDB(getActivity());
         // DB가 처음 생성되어 데이터가 없으면, 새로고침을 눌러달라는 메시지 출력
-        if(db.count("Air")==0){
-            db.insert("Air", "입력된 ","데이터가 ","없습니다. ","새로고침 ","버튼을 ", "눌러주세요");
+        if(dataBase.count("Air")==0){
+            dataBase.insert("Air", "입력된 ","데이터가 ","없습니다. ","새로고침 ","버튼을 ", "눌러주세요");
         }
-        String st = db.select("Air");
+        String st = dataBase.select("Air");
 
         // 초기 화면을 "air"으로 설정
         final View view = inflater.inflate(R.layout.air, container, false);
@@ -661,7 +661,7 @@ public class Air extends Fragment {
             buildURL(); // URL 생성
             updateDB(parse()); // 파싱한 문자열을 이용해 데이터를 업데이트 한다.
 
-            return(db.select("Air")); // SQL SELECT 문을 통해 정보를 읽어온다.
+            return(dataBase.select("Air")); // SQL SELECT 문을 통해 정보를 읽어온다.
         }
 
         // doInBackground 메소드에서 리턴한 값을 인자로 UI를 수정하는 메소드
@@ -866,26 +866,26 @@ public class Air extends Fragment {
                 String pm25Grade1h = parsedString.split("\n")[5].split(" ")[1];
 
                 // DB에 입력된 데이터의 개수를 구한다.
-                int count = db.count("Air");
+                int count = dataBase.count("Air");
                 // 데이터 개수에 따라
                 // 데이터가 없을 때 (데이터가 제대로 입력되지 않았을 때)
                 if(count == 0) {
                     // 데이터 입력
-                    db.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                    dataBase.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
                 // 데이터가 하나일때 (일반적인 경우)
                 else if(count == 1){
                     // 데이터 수정
-                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                    dataBase.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
                 // 데이터가 두개 이상일때 (오류가 발생했을 경우)
                 else{
                     // 데이터를 하나만 남기고 지운 뒤
-                    while(db.count("Air")!=1 ) {
-                        db.delete("Air");
+                    while(dataBase.count("Air")!=1 ) {
+                        dataBase.delete("Air");
                     }
                     // 데이터를 수정한다.
-                    db.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                    dataBase.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
                 }
 
                 // StringBuilder에 저장되어있던 미세먼지 데이터를 삭제한다.
