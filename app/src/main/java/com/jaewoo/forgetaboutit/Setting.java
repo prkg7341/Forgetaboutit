@@ -3,12 +3,12 @@ package com.jaewoo.forgetaboutit;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.Spinner;
 
 import java.io.InputStream;
@@ -23,8 +23,11 @@ public class Setting extends Fragment {
     }
 
     DataBase dataBase;
-    static String st1;
-    static String st2;
+    public static String st;
+    public static String st1;
+    public static String st2;
+    public static String st3;
+    public static String starthour, startmin, endhour, endmin;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
@@ -35,57 +38,176 @@ public class Setting extends Fragment {
         // values의 strings에 저장된 array: sido를 가져옴
         Resources res = getResources();
         String[] sido = res.getStringArray(R.array.sido);
+        String[] hour = res.getStringArray(R.array.hour);
+        String[] min = res.getStringArray(R.array.min);
 
-        final Spinner spinner = (Spinner) view.findViewById(R.id.spinner);
-        final Spinner spinner2 = (Spinner) view.findViewById(R.id.spinner2);
-        final Spinner spinner3 = (Spinner) view.findViewById(R.id.spinner3);
+        final Spinner sidoSpinner = (Spinner) view.findViewById(R.id.sidoSpinner);
+        final Spinner sggSpinner = (Spinner) view.findViewById(R.id.sggSpinner);
+        final Spinner umdSpinner = (Spinner) view.findViewById(R.id.umdSpinner);
+        final Spinner starthourSpinner = (Spinner) view.findViewById(R.id.starthourSpinner);
+        final Spinner startminSpinner = (Spinner) view.findViewById(R.id.startminSpinner);
+        final Spinner endhourSpinner = (Spinner) view.findViewById(R.id.endhourSpinner);
+        final Spinner endminSpinner = (Spinner) view.findViewById(R.id.endminSpinner);
 
-        String st3;
+        final ArrayAdapter sidoArrayAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, sido);//my_list_item_1
+        final ArrayAdapter hourArrayAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, hour);
+        final ArrayAdapter minArrayAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, min);
+
+        sidoSpinner.setAdapter(sidoArrayAdapter);
+
+        starthourSpinner.setAdapter(hourArrayAdapter);
+        startminSpinner.setAdapter(minArrayAdapter);
+        endhourSpinner.setAdapter(hourArrayAdapter);
+        endminSpinner.setAdapter(minArrayAdapter);
+
+        st1 = sidoSpinner.getSelectedItem().toString();
+
+        sidoSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                st1 = sidoSpinner.getSelectedItem().toString();
+                if(st1.split("")[2].compareTo("남")==0 || st1.split("")[2].compareTo("북")==0){
+                    st = st1.substring(0,2);
+                }
+                else{
+                    st = st1.substring(0,1);
+                }
+                ArrayAdapter arrayAdapter2 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSi", st1).split("-"));
+                sggSpinner.setAdapter(arrayAdapter2);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        sggSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                st2 = sggSpinner.getSelectedItem().toString();
+                ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSiU", st1, st2).split("-"));
+                umdSpinner.setAdapter(arrayAdapter3);
+                st3 = umdSpinner.getSelectedItem().toString();
+                if(st2.compareTo("")==0){
+                    st2 = "세종시";
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        umdSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                st3 = umdSpinner.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        starthour = starthourSpinner.getSelectedItem().toString();
+        startmin = startminSpinner.getSelectedItem().toString();
+        endhour = endhourSpinner.getSelectedItem().toString();
+        endmin = endminSpinner.getSelectedItem().toString();
+
+        starthourSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                starthour = starthourSpinner.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        startminSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                startmin = startminSpinner.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        endhourSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                endhour = endhourSpinner.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        endminSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                endmin = endminSpinner.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        final CheckBox air = (CheckBox) view.findViewById(R.id.checkBox);
+
+        if(air.isChecked()){
+            starthourSpinner.getSelectedView().setEnabled(true);
+            startminSpinner.getSelectedView().setEnabled(true);
+            endhourSpinner.getSelectedView().setEnabled(true);
+            endminSpinner.getSelectedView().setEnabled(true);
+        }
+        else{
+            starthourSpinner.setEnabled(false);
+            startminSpinner.setEnabled(false);
+            endhourSpinner.setEnabled(false);
+            endminSpinner.setEnabled(false);
+        }
+
+        air.setOnClickListener(new CheckBox.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if(air.isChecked()){
+                    starthourSpinner.setEnabled(true);
+                    startminSpinner.setEnabled(true);
+                    endhourSpinner.setEnabled(true);
+                    endminSpinner.setEnabled(true);
+                }
+                else{
+                    starthourSpinner.setEnabled(false);
+                    startminSpinner.setEnabled(false);
+                    endhourSpinner.setEnabled(false);
+                    endminSpinner.setEnabled(false);
+                }
+            }
+        }) ;
+
+
 
         if(dataBase.count("SiSi")<250 || dataBase.count("SiSiU")<5048) {
             copyExcelDataToDatabase();
         }
-
-        final ArrayAdapter arrayAdapter = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, sido);
-        spinner.setAdapter(arrayAdapter);
-
-        st1 = spinner.getSelectedItem().toString();
-
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                st1 = spinner.getSelectedItem().toString();
-                ArrayAdapter arrayAdapter2 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSi", st1).split("-"));
-                spinner2.setAdapter(arrayAdapter2);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-        spinner2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                st2 = spinner2.getSelectedItem().toString();
-                ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSiU", st1, st2).split("-"));
-                spinner3.setAdapter(arrayAdapter3);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-
-        //ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, );
-        //spinner3.setAdapter(arrayAdapter3);
-
-
 
         return view;
     }
