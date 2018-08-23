@@ -36,7 +36,8 @@ public class DataBase extends SQLiteOpenHelper {
                 "미세먼지등급 TEXT, " +
                 "초미세먼지농도 TEXT, " +
                 "초미세먼지등급 TEXT, " +
-                "갱신시간 Time);");
+                "갱신시간 Time, " +
+                "지역 TEXT);");
         db.execSQL("CREATE TABLE SiSi " +
                 "(ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "시도 TEXT, " +
@@ -63,11 +64,12 @@ public class DataBase extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public void insert(String table, String dataTime, String pm10Value, String pm10Grade1h, String pm25Value, String pm25Grade1h, String now){
+    public void insert(String table, String dataTime, String pm10Value, String pm10Grade1h, String pm25Value, String pm25Grade1h, String now, String region){
 
         db = getWritableDatabase();
         db.execSQL("INSERT INTO " + table + " VALUES(null, '" + dataTime + "', '" + pm10Value + "', '" + pm10Grade1h + "', '"
-                + pm25Value + "', '" + pm25Grade1h + "', '" + now + "');");
+                //+ pm25Value + "', '" + pm25Grade1h + "', '" + now + "', '" + Main.userLocation + "');");
+                + pm25Value + "', '" + pm25Grade1h + "', '" + now + "', '" + region + "');");
         db.close();
     }
 
@@ -88,12 +90,12 @@ public class DataBase extends SQLiteOpenHelper {
         String st = null;
         try (Cursor c = db.rawQuery(
                 "SELECT * " +
-                        " FROM " + table + ";", null)) {
+                        "FROM " + table + ";", null)) {
             Log.d(TAG, "입력된 데이터 개수: " + c.getCount());
             if (c.getCount() > 0) {
                 c.moveToFirst();
-                st = c.getString(1) + " " + c.getString(2) + " " + c.getString(3) + " "
-                        + c.getString(4) + " " + c.getString(5) + " " + c.getString(6);
+                st = c.getString(1) + "-" + c.getString(2) + "-" + c.getString(3) + "-"
+                        + c.getString(4) + "-" + c.getString(5) + "-" + c.getString(6) + "\n" + c.getString(7);
             }
         }
         db.close();
@@ -171,7 +173,7 @@ public class DataBase extends SQLiteOpenHelper {
         return num;
     }
 
-    public void update(String table, String dataTime, String pm10Value, String pm10Grade1h, String pm25Value, String pm25Grade1h, String now){
+    public void update(String table, String dataTime, String pm10Value, String pm10Grade1h, String pm25Value, String pm25Grade1h, String now, String region){
         db = getWritableDatabase();
         db.execSQL("UPDATE " + table
                 + " SET 측정시간 = '" + dataTime + "', "
@@ -179,7 +181,9 @@ public class DataBase extends SQLiteOpenHelper {
                 + " 미세먼지등급 = '" + pm10Grade1h + "', "
                 + " 초미세먼지농도 = '" + pm25Value + "', "
                 + " 초미세먼지등급 = '" + pm25Grade1h + "', "
-                + " 갱신시간 = '" + now + "';");
+                + " 갱신시간 = '" + now + "', "
+                //+ " 지역 = '" + Main.userLocation + "';");
+                + " 지역 = '" + region + "';");
         db.close();
         Log.d(TAG, "DB was updated");
     }

@@ -3,12 +3,12 @@ package com.jaewoo.forgetaboutit;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.Spinner;
 
 import java.io.InputStream;
@@ -23,12 +23,14 @@ public class Setting extends Fragment {
     }
 
     DataBase dataBase;
-    static String st1;
-    static String st2;
+    public static String st;
+    public static String st1;
+    public static String st2;
+    public static String st3;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
-        final View view = inflater.inflate(R.layout.setting, container, false);
+        View view = inflater.inflate(R.layout.setting, container, false);
 
         dataBase = DataBase.openDB(getActivity());
 
@@ -40,7 +42,11 @@ public class Setting extends Fragment {
         final Spinner spinner2 = (Spinner) view.findViewById(R.id.spinner2);
         final Spinner spinner3 = (Spinner) view.findViewById(R.id.spinner3);
 
-        String st3;
+        CheckBox air = (CheckBox) view.findViewById(R.id.checkBox);
+
+        if(air.isChecked()){
+
+        }
 
         if(dataBase.count("SiSi")<250 || dataBase.count("SiSiU")<5048) {
             copyExcelDataToDatabase();
@@ -56,6 +62,12 @@ public class Setting extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 st1 = spinner.getSelectedItem().toString();
+                if(st1.split("")[2].compareTo("남")==0 || st1.split("")[2].compareTo("북")==0){
+                    st = st1.substring(0,2);
+                }
+                else{
+                    st = st1.substring(0,1);
+                }
                 ArrayAdapter arrayAdapter2 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSi", st1).split("-"));
                 spinner2.setAdapter(arrayAdapter2);
             }
@@ -73,6 +85,10 @@ public class Setting extends Fragment {
                 st2 = spinner2.getSelectedItem().toString();
                 ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, dataBase.select("SiSiU", st1, st2).split("-"));
                 spinner3.setAdapter(arrayAdapter3);
+                st3 = spinner3.getSelectedItem().toString();
+                if(st2.compareTo("")==0){
+                    st2 = "세종시";
+                }
             }
 
             @Override
@@ -81,11 +97,18 @@ public class Setting extends Fragment {
             }
         });
 
+        spinner3.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 
-        //ArrayAdapter arrayAdapter3 = new ArrayAdapter(getActivity(), android.R.layout.simple_list_item_1, );
-        //spinner3.setAdapter(arrayAdapter3);
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                st3 = spinner3.getSelectedItem().toString();
+            }
 
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
 
+            }
+        });
 
         return view;
     }
