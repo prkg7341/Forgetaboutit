@@ -13,7 +13,7 @@
         android:layout_height="0dp"
         android:layout_marginBottom="8dp"
         android:layout_marginTop="8dp"
-        android:text="get API information here"
+        android:text='미세먼지 정보 출력이 되지 않을때, "GET API INFORMAION" 버튼을 눌러 이 TextView에 제대로 데이터가 출력되지 않으면, API 서버 문제일 가능성이 높습니다.'
         android:textAlignment="center"
         android:textSize="10sp"
         app:layout_constraintBottom_toBottomOf="parent"

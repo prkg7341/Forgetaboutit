@@ -70,7 +70,7 @@ public class Air extends Fragment {
     String address;
     // 필드에서 선언된 now값을 현재시간으로 초기화
 
-    // fragment가 return될 때 실행되는 메소드
+        // fragment가 return될 때 실행되는 메소드
         public View onCreateView(@NonNull LayoutInflater inflater,
                 ViewGroup container, Bundle savedInstanceState) {
 
@@ -206,6 +206,10 @@ public class Air extends Fragment {
                                 Manifest.permission.ACCESS_COARSE_LOCATION},
                         MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
             }
+            else{
+                ActivityCompat.requestPermissions(getActivity(), new String[]{
+                        Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
+            }
             // 이전에 사용자가 "ACCESS_FINE_LOCATION" 권한을 거부한 적이 있으면
             if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
                     Manifest.permission.ACCESS_FINE_LOCATION)){
@@ -220,8 +224,6 @@ public class Air extends Fragment {
             // 권한 요청이 처음이라면
             else{
                 // 권한 요청
-                ActivityCompat.requestPermissions(getActivity(), new String[]{
-                        Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATIONS);
                 ActivityCompat.requestPermissions(getActivity(), new String[]{
                         Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
             }
@@ -512,7 +514,9 @@ public class Air extends Fragment {
                 // 파싱의 작업상태 초기화
                 parserEvent = parser.getEventType();
                 // 파싱할 데이터를 가져올 URL 스트림 생성
-                parser.setInput(url.openStream(), null);
+                url.openConnection().setReadTimeout(300);
+                url.openConnection().setConnectTimeout(300);
+                parser.setInput(url.openConnection().getInputStream(), null);
 
                 // 파싱 작업이 끝날때까지
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
@@ -677,7 +681,9 @@ public class Air extends Fragment {
                 // 파싱의 작업상태 초기화
                 parserEvent = parser.getEventType();
                 // 파싱할 데이터를 가져올 URL 스트림 생성
-                parser.setInput(url.openStream(), null);
+                url.openConnection().setReadTimeout(300);
+                url.openConnection().setConnectTimeout(300);
+                parser.setInput(url.openConnection().getInputStream(), null);
 
                 // 파싱 작업이 끝날때까지, 한번만 실행되도록
                 while (parserEvent != XmlPullParser.END_DOCUMENT && (sb.length()==0)) {
@@ -722,7 +728,6 @@ public class Air extends Fragment {
             catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
-            Log.d("여기", sb.toString());
         }
     }
 
@@ -864,7 +869,9 @@ public class Air extends Fragment {
                 // 파싱의 작업상태 초기화
                 parserEvent = parser.getEventType();
                 // 파싱할 데이터를 가져올 URL 스트림 생성
-                parser.setInput(url.openStream(), null);
+                url.openConnection().setReadTimeout(300);
+                url.openConnection().setConnectTimeout(300);
+                parser.setInput(url.openConnection().getInputStream(), null);
 
                 // 파싱 작업이 끝날때까지
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
@@ -1076,6 +1083,20 @@ public class Air extends Fragment {
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             Toast.makeText(getActivity(),s,Toast.LENGTH_LONG).show();
+        }
+    }
+
+    void getAirInfo(View view){
+        getLocation(view);
+        if(location!=null){
+            // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
+            new AddressAsyncTask().execute(view);
+            // 주소(읍면동)을 통해 TM좌표 획득
+            new TMAsyncTask().execute(view);
+            // TM좌표를 통해 인근측정소 정보 획득
+            new MeasuringStationAsyncTask().execute(view);
+            // 인근측정소 정보를 통해 대기오염정보 획득, TextView에 출력
+            new AirAsyncTask().execute(view);
         }
     }
 }

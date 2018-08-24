@@ -1,8 +1,12 @@
 package com.jaewoo.forgetaboutit;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +16,8 @@ import android.widget.CheckBox;
 import android.widget.Spinner;
 
 import java.io.InputStream;
+import java.util.Calendar;
+import java.util.Objects;
 
 import jxl.Sheet;
 import jxl.Workbook;
@@ -203,11 +209,12 @@ public class Setting extends Fragment {
             }
         }) ;
 
-
-
         if(dataBase.count("SiSi")<250 || dataBase.count("SiSiU")<5048) {
             copyExcelDataToDatabase();
         }
+
+        // 매 시각 5분마다 파싱,
+        //repeatedAlarm();
 
         return view;
     }
@@ -272,5 +279,23 @@ public class Setting extends Fragment {
                 workbook1.close();
             }
         }
+    }
+
+    public void repeatedAlarm() {
+
+        AlarmManager am = (AlarmManager) Objects.requireNonNull(getActivity()).getSystemService(getActivity().ALARM_SERVICE);
+
+        // 실행될 intent
+        Intent intent = new Intent(getActivity(), PushPopup.class);
+        PendingIntent sender = PendingIntent.getBroadcast(getActivity(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Calendar parsingTime = Calendar.getInstance();
+
+        //알람시간 calendar에 set
+        parsingTime.set(parsingTime.get(Calendar.YEAR), parsingTime.get(Calendar.MONTH), parsingTime.get(Calendar.DATE),
+                parsingTime.get(Calendar.HOUR), parsingTime.get(Calendar.MINUTE), parsingTime.get(Calendar.SECOND));
+
+        // 매 시각 5분마다 반복하도록 알람 예약
+        am.setRepeating(AlarmManager.RTC_WAKEUP, parsingTime.getTimeInMillis(), 5*1000L, sender);
     }
 }

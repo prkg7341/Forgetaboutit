@@ -123,7 +123,9 @@ public class Weather extends Fragment {
                 parserEvent = parser.getEventType();
                 factory.setNamespaceAware(true);
 
-                parser.setInput(url.openStream(), null);
+                url.openConnection().setReadTimeout(300);
+                url.openConnection().setConnectTimeout(300);
+                parser.setInput(url.openConnection().getInputStream(), null);
 
                 while (parserEvent != XmlPullParser.END_DOCUMENT) {
                     switch (parserEvent) {
