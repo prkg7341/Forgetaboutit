@@ -39,7 +39,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-import static android.content.ContentValues.TAG;
+import static com.jaewoo.forgetaboutit.Setting.st1;
+import static com.jaewoo.forgetaboutit.Setting.st2;
+import static com.jaewoo.forgetaboutit.Setting.st3;
 
 public class Air extends Fragment {
 
@@ -65,29 +67,66 @@ public class Air extends Fragment {
     private String key =
             "kHyDlmh%2FCNeOpJZKLPsgHn0Hwo%2BkVzGLfSF2e8k6c3w0%2FbccHw7tu5TQ4UX8TRGBb8jwpEpT%2BKvi9%2FsWxfbRmA%3D%3D"; // 공공데이터 API 인증키
     DataBase dataBase; // DataBase 클래스 객체
+    String address;
+    // 필드에서 선언된 now값을 현재시간으로 초기화
 
     // fragment가 return될 때 실행되는 메소드
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
+        public View onCreateView(@NonNull LayoutInflater inflater,
+                ViewGroup container, Bundle savedInstanceState) {
+
+        // 초기 화면을 "air"으로 설정
+        final View view = inflater.inflate(R.layout.air, container, false);
 
         // DB가 존재하지 않으면 생성
         dataBase = DataBase.openDB(getActivity());
         // DB가 처음 생성되어 데이터가 없으면, 새로고침을 눌러달라는 메시지 출력
         if(dataBase.count("Air")==0){
-            dataBase.insert("Air", "입력된 ","데이터가 ","없습니다. ","새로고침 ","버튼을 ", "눌러주세요");
+            dataBase.insert("Air", "입력된 ","데이터가 ","없습니다. ","새로고침 ","버튼을 ", "눌러주세요", "\n ");
         }
-        String st = dataBase.select("Air");
-
-        // 초기 화면을 "air"으로 설정
-        final View view = inflater.inflate(R.layout.air, container, false);
 
         // airView 초기화
         airView = view.findViewById(R.id.airView);
 
+        String st = dataBase.select("Air");
+
         // 데이터가 존재하면 airView에 데이터 출력
         if(st!=null) {
-            airView.setText(st);
+            String temp = st.split("\n")[0];
+            String str1 = temp.split("-")[0];
+            String str2 = temp.split("-")[1];
+            String str3 = temp.split("-")[2];
+            String str4 = temp.split("-")[3];
+            String str5 = temp.split("-")[4];
+            String str6 = temp.split("-")[5];
+            String result;
+            if(str1.length()==10) {
+                 result = str1.substring(2, 4) + "월 "
+                        + str1.substring(4, 6) + "일 "
+                        + str1.substring(6, 8) + "시 "
+                        + str1.substring(8, 10) + "분 기준\n"
+                        + "미세먼지 농도: " + str2 + "\n"
+                        + "미세먼지 등급: " + str3 + "\n"
+                        + "초미세먼지 농도: " + str4 + "\n"
+                        + "초미세먼지 등급: " + str5 + "\n"
+                        + str6.substring(2, 4) + "월 "
+                        + str6.substring(4, 6) + "일 "
+                        + str6.substring(6, 8) + "시 "
+                        + str6.substring(8, 10) + "분에 업데이트되었습니다.";
+            }
+            else{
+                result = st;
+            }
+
+            // TextView에 리턴받은 값을 출력한다.
+            airView.setText(result);
         }
+
+        /*if(Main.userLocation!=null) {
+            Main.userLocation.setText(address);
+        }
+        else{
+            Main.userLocation.setText("선택된 위치가 없습니다.");
+        }*/
 
         // 버튼 클릭시 실행 여부를 다시 확인하는 AlertDialog 생성
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
@@ -103,7 +142,10 @@ public class Air extends Fragment {
                         new DialogInterface.OnClickListener() { // 리스너 생성
                             public void onClick(DialogInterface dialog, int id) { // AlertDialog에서 renew를 선택하면
                                 // 위치서비스를 통해 WGS84 위경도 좌표 획득하여 location에 저장
-                                getLocation();
+                                location=null;
+                                locationAddress=null;
+                                address = null;
+                                getLocation(view);
                                 if(location!=null){
                                     // WGS84 위경도 좌표를 통해 주소(읍면동) 획득
                                     new AddressAsyncTask().execute(view);
@@ -147,11 +189,11 @@ public class Air extends Fragment {
     }
 
     // 위치서비스를 통해 WGS84 위경도 좌표를 획득하는 메소드
-    void getLocation(){
+    void getLocation(View view){
         // 권한이 허용되어 있지 않으면
         if(ContextCompat.checkSelfPermission (Objects.requireNonNull(getActivity()),
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED
-                && ContextCompat.checkSelfPermission (getActivity(),
+                || ContextCompat.checkSelfPermission (getActivity(),
                 Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED){
             // 이전에 사용자가 "ACCESS_COARSE_LOCATION" 권한을 거부한 적이 있으면
             if(ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
@@ -196,7 +238,15 @@ public class Air extends Fragment {
 
             // GPS, 네트워크 프로바이더 둘다 사용이 불가능한 경우
             if(!(isGPSEnabled | isNetworkEnabled)){
-                Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_SHORT).show();
+                location=null;
+                locationAddress=null;
+                address = null;
+                // 주소(읍면동)을 통해 TM좌표 획득
+                new TMAsyncTask().execute(view);
+                // TM좌표를 통해 인근측정소 정보 획득
+                new MeasuringStationAsyncTask().execute(view);
+                // 인근측정소 정보를 통해 대기오염정보 획득, TextView에 출력
+                new AirAsyncTask().execute(view);
             }
             // 사용가능한 프로바이더가 있는 경우
             else {
@@ -306,6 +356,9 @@ public class Air extends Fragment {
             // Locale은 어플리케이션이 실행되는 지역을 나타내며, 이 어플리케이션은 한국 내에서만 실행될 예정이므로
             // KOREA로 한정하여 메소드를 실행한다.
             locationAddress = getAddressFromLocation(location, Locale.KOREA);
+            if(locationAddress!=null) {
+                address = locationAddress;
+            }
             return null; // onPostExecute 메소드를 사용하지 않으므로 return 값이 필요하지 않다.
         }
 
@@ -334,8 +387,8 @@ public class Air extends Fragment {
             // getFromLocation 메소드 실행 중 오류 처리
             catch (IOException e) {
                 // 오류 발생 시 Toast 메시지 출력
-                Toast.makeText(getActivity(),
-                        "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
+                // Toast.makeText(getActivity(),
+                //        "위치로부터 주소를 인식할 수 없습니다. 네트워크가 연결되어 있는지 확인해 주세요.", Toast.LENGTH_SHORT ).show();
                 // 에러 메세지의 발생 근원지를 찾아 단계별로 에러 출력 (가장 자세히)
                 e.printStackTrace();
                 // 에러 메시지 리턴
@@ -382,6 +435,10 @@ public class Air extends Fragment {
         @Override
         protected String doInBackground(View... views) {
 
+            if(address==null){
+                address = st1 + "-" + st2 + "-" + st3;
+            }
+            Log.d("address는 ", address);
             buildURL(); // URL 생성
             parse(); // 파싱
             return null;
@@ -401,8 +458,15 @@ public class Air extends Fragment {
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
                         .append("=").append(key);
                 // 읍,면,동 입력 (split(" ")을 통해 index 순으로 국가[0] - 시,도[1] - 시,군,구[2] - 읍,면,동[3] 순의 배열 생성)
-                urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8"))
-                        .append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8"));
+                if(locationAddress!=null && locationAddress.split(" ").length>=4) {
+                    Log.d("여기","위치서비스 기반 ");
+                    urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8"))
+                            .append("=").append(URLEncoder.encode(locationAddress.split(" ")[3], "UTF-8"));
+                }
+                else{Log.d("여기","사용자 설정 지역 기반");
+                    urlBuilder.append("&").append(URLEncoder.encode("umdName", "UTF-8"))
+                            .append("=").append(URLEncoder.encode(st3, "UTF-8"));
+                }
                 // 페이지 수 입력 (데이터를 한 화면에 모두 나타내기 위함)
                 urlBuilder.append("&").append(URLEncoder.encode("pageNum", "UTF-8"))
                         .append("=").append(URLEncoder.encode("1", "UTF-8"));
@@ -411,6 +475,12 @@ public class Air extends Fragment {
                         .append("=").append(URLEncoder.encode("999", "UTF-8"));
                 // StringBuilder로 생성한 문자열을 URL 형태로 변환 및 저장
                 url = new URL(urlBuilder.toString());
+                if(locationAddress!=null) {
+                    Log.d("location", locationAddress);
+                }
+                else{
+                    Log.d("location", st1 + " " + st2 + " " + st3);
+                }
             }
             // 입출력 예외처리
             catch (IOException e) {
@@ -495,9 +565,25 @@ public class Air extends Fragment {
                         // parser가 끝 태그를 만날 때 실행
                         case XmlPullParser.END_TAG:
                             // parser가 "item" 태그를 만나고 시군구이름과 읍면동이름이 전에 구한 주소값과 같을 때 TM좌표 저장
-                            if (parser.getName().equals("item") && sggName.equals(locationAddress.split(" ")[2])
-                                    && umdName.equals(locationAddress.split(" ")[3])){
-                                sb.append(tmX).append(" ").append(tmY);
+                            if(locationAddress!=null && locationAddress.split(" ").length>=4) {
+                                if(locationAddress.split(" ")[2]!=null) {
+                                    if (parser.getName().equals("item") && sggName.equals(locationAddress.split(" ")[2])
+                                            && umdName.equals(locationAddress.split(" ")[3])) {
+                                        sb.append(tmX).append(" ").append(tmY);
+                                    }
+                                }
+                                else{
+                                    if (parser.getName().equals("item") && sggName.equals("세종시")
+                                            && umdName.equals(locationAddress.split(" ")[3])) {
+                                        sb.append(tmX).append(" ").append(tmY);
+                                    }
+                                }
+                            }
+                            else{
+                                if (parser.getName().equals("item") && sggName.equals(st2)
+                                        && umdName.equals(st3)) {
+                                    sb.append(tmX).append(" ").append(tmY);
+                                }
                             }
                             break;
                     }
@@ -554,7 +640,7 @@ public class Air extends Fragment {
                 urlBuilder.append("?").append(URLEncoder.encode("serviceKey", "UTF-8"))
                         .append("=").append(key);
                 // TM 좌표 데이터가 StringBuilder에 입력되어있으면
-                if(sb.toString().split("").length >= 2) {
+                if(sb.toString().split(" ").length >= 2) {
                     // TM X좌표 입력
                     urlBuilder.append("&").append(URLEncoder.encode("tmX", "UTF-8"))
                             .append("=").append(URLEncoder.encode(sb.toString().split(" ")[0], "UTF-8")); //읍면동
@@ -636,6 +722,7 @@ public class Air extends Fragment {
             catch (XmlPullParserException | IOException e) {
                 e.printStackTrace();
             }
+            Log.d("여기", sb.toString());
         }
     }
 
@@ -651,7 +738,6 @@ public class Air extends Fragment {
         // 네트워크에 연결할 URL 선언
         private URL url;
         // 현재 시간을 저장할 String 변수 선언
-        String now;
 
         // doInBackground는 상위 캘래스의 view를 인자로 받아 AsyncTask 클래스의 메인 메소드 역할을 하며
         // UI와 관련되지 않은 작업들을 포함한다. (UI 관련 작업은 onPostExecute 메소드에서 실행)
@@ -669,11 +755,56 @@ public class Air extends Fragment {
             super.onPostExecute(s);
 
             // 리턴받은 값이 올바른 형태로 저장되어 있을 때
-            if(s!=null && s.split(" ")[5].compareTo(now+"")==0){
+            if(s.split("-")[5].split("\n")[0].compareTo(new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()))==0){
+                String temp = s.split("\n")[0];
+                String str1 = temp.split("-")[0];
+                String str2 = temp.split("-")[1];
+                String str3 = temp.split("-")[2];
+                String str4 = temp.split("-")[3];
+                String str5 = temp.split("-")[4];
+                String str6 = temp.split("-")[5];
+                String result = str1.substring(2,4) + "월 "
+                        + str1.substring(4,6) + "일 "
+                        + str1.substring(6,8) + "시 "
+                        + str1.substring(8,10) + "분 기준\n"
+                        + "미세먼지 농도: " + str2 + "\n"
+                        + "미세먼지 등급: " + str3 + "\n"
+                        + "초미세먼지 농도: " + str4 + "\n"
+                        + "초미세먼지 등급: " + str5 + "\n"
+                        + str6.substring(2,4) + "월 "
+                        + str6.substring(4,6) + "일 "
+                        + str6.substring(6,8) + "시 "
+                        + str6.substring(8,10) + "분에 업데이트되었습니다.";
+
                 // TextView에 리턴받은 값을 출력한다.
-                airView.setText(s);
-                // 리턴받은 값을 출력한 후, Updated successfully 메시지를 보여준다.
-                Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+                airView.setText(result);
+
+                String string =  dataBase.select("Air").split("\n")[1];
+                if(string.split(" ").length>2){
+                    if(address.split(" ")[2].compareTo(string.split(" ")[2])==0){
+                        // 리턴받은 값을 출력한 후, Updated successfully 메시지를 보여준다.
+                        Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+                    }
+                }
+                if(string.split("-").length>2){
+                    if(address.split("-")[2].compareTo(string.split("-")[2])==0){
+                        // 리턴받은 값을 출력한 후, Updated successfully 메시지를 보여준다.
+                        Toast.makeText(getActivity(), "Updated successfully", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
+            if(Main.all!=null) {
+                if(address.split("-").length==3) {
+                    String location = address.split("-")[0] + " " + address.split("-")[1] + " " + address.split("-")[2];
+                    Main.all.setText("현재위치: " + location);
+                }
+                else{
+                    Main.all.setText("현재위치: " + address);
+                }
+            }
+            else{
+                Main.all.setText("선택된 위치가 없습니다.");
             }
         }
 
@@ -798,29 +929,62 @@ public class Air extends Fragment {
                                 // parser가 "item" 태그를 만나면 측정소 이름 저장
                                 if (parser.getName().equals("item")) {
                                     // 미세먼지등급에 따른 분류 (공공데이터 자체 기준)
-                                    switch(Integer.parseInt(pm10Grade1h)) {
-                                        case 1: pm10Grade1h = "좋음"; break;
-                                        case 2: pm10Grade1h = "보통"; break;
-                                        case 3: pm10Grade1h = "나쁨"; break;
-                                        case 4: pm10Grade1h = "매우나쁨"; break;
+                                    if(!(pm10Value.compareTo("-")==0 || pm10Value==null)) {
+                                        switch (Integer.parseInt(pm10Grade1h)) {
+                                            case 1:
+                                                pm10Grade1h = "좋음";
+                                                break;
+                                            case 2:
+                                                pm10Grade1h = "보통";
+                                                break;
+                                            case 3:
+                                                pm10Grade1h = "나쁨";
+                                                break;
+                                            case 4:
+                                                pm10Grade1h = "매우나쁨";
+                                                break;
+                                        }
+                                    }
+                                    else{
+                                        pm10Grade1h = null;
+                                        pm10Value = null;
                                     }
                                     // 초미세먼지등급에 따른 분류 (공공데이터 자체 기준)
-                                    switch(Integer.parseInt(pm25Grade1h)) {
-                                        case 1: pm25Grade1h = "좋음"; break;
-                                        case 2: pm25Grade1h = "보통"; break;
-                                        case 3: pm25Grade1h = "나쁨"; break;
-                                        case 4: pm25Grade1h = "매우나쁨"; break;
+                                    if(!(pm25Value.compareTo("-")==0 || pm25Value==null)) {
+                                        switch (Integer.parseInt(pm25Grade1h)) {
+                                            case 1:
+                                                pm25Grade1h = "좋음";
+                                                break;
+                                            case 2:
+                                                pm25Grade1h = "보통";
+                                                break;
+                                            case 3:
+                                                pm25Grade1h = "나쁨";
+                                                break;
+                                            case 4:
+                                                pm25Grade1h = "매우나쁨";
+                                                break;
+                                        }
+                                    }
+                                    else{
+                                        pm25Grade1h = null;
+                                        pm25Value = null;
                                     }
                                     // StringBuilder로 DB에 입력할 데이터 생성
-                                    sb.append("\n").append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
-                                            .append("\n미세먼지등급: ").append(pm10Grade1h)
-                                            .append("\n초미세먼지농도: ").append(pm25Value)
-                                            .append("\n초미세먼지등급: ").append(pm25Grade1h);
+                                    if(pm10Grade1h==null || pm25Grade1h==null || pm10Value==null || pm25Value==null){
+                                        new MakeToast("미세먼지 정보 API 오류로 새로고침에 실패하였습니다.");
+                                    }
+                                    else {
+                                        sb.append("\n").append(dataTime).append(" 기준\n미세먼지농도: ").append(pm10Value)
+                                                .append("\n미세먼지등급: ").append(pm10Grade1h)
+                                                .append("\n초미세먼지농도: ").append(pm25Value)
+                                                .append("\n초미세먼지등급: ").append(pm25Grade1h);
+                                    }
                                 }
                             }
                             // NumberFormatException 예외 처리
                             catch(NumberFormatException e){
-                                //Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();//수정
+                                new MakeToast("미세먼지 정보 API 오류로 새로고침에 실패하였습니다.");
                             }
                             break;
                     }
@@ -841,22 +1005,18 @@ public class Air extends Fragment {
             }
             // StringBuidler로 만든 데이터를 String 형으로 리턴
             // updateData 메소드의 인자로 쓰인다.
+            Log.d("여기", sb.toString());
             return sb.toString();
         }
 
         // parse 메소드에서 리턴받은 값을 인자로 DB를 업데이트하는 메소드
         private void updateDB(String parsedString){
 
-            Log.d(TAG,parsedString);
-            // 필드에서 선언된 now값을 현재시간으로 초기화
-            now = new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date());
-
             // 리턴받은 값에 데이터가 정확한 형태로 저장되어 있을 때
-            if(parsedString.length()!=0 && parsedString.split(" ")[1].compareTo("측정소")!=0) {
-
+            if(parsedString.length()!=0 && parsedString.split(" ").length>2 && parsedString.split(" ")[1].compareTo("측정소")!=0) {
                 // 선언부
                 String st = parsedString.split("\n")[1].split(" 기준")[0];
-                String dataTime = st.split("-")[0].split("")[2] + st.split("-")[0].split("")[3]
+                String dataTime = st.split("-")[0].split("")[3] + st.split("-")[0].split("")[4]
                         + st.split("-")[1] + st.split("-")[2].split(" ")[0]
                         + st.split("-")[2].split(" ")[1].split(":")[0]
                         + st.split("-")[2].split(" ")[1].split(":")[1];
@@ -871,12 +1031,12 @@ public class Air extends Fragment {
                 // 데이터가 없을 때 (데이터가 제대로 입력되지 않았을 때)
                 if(count == 0) {
                     // 데이터 입력
-                    dataBase.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                    dataBase.insert("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h,  new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()), address);
                 }
                 // 데이터가 하나일때 (일반적인 경우)
                 else if(count == 1){
                     // 데이터 수정
-                    dataBase.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                    dataBase.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h,  new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()), address);
                 }
                 // 데이터가 두개 이상일때 (오류가 발생했을 경우)
                 else{
@@ -885,20 +1045,37 @@ public class Air extends Fragment {
                         dataBase.delete("Air");
                     }
                     // 데이터를 수정한다.
-                    dataBase.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h, now);
+                    dataBase.update("Air", dataTime, pm10Value, pm10Grade1h, pm25Value, pm25Grade1h,  new SimpleDateFormat("yyMMddHHmm",Locale.KOREA).format(new Date()), address);
                 }
 
                 // StringBuilder에 저장되어있던 미세먼지 데이터를 삭제한다.
                 sb.delete(0, sb.length());
             }
             // 위치서비스를 이용할 수 없을 경우
-            else if(!(isGPSEnabled | isNetworkEnabled)){
-                //Toast.makeText(getActivity(), "위치서비스를 활성화 해주세요", Toast.LENGTH_LONG).show();//수정
-            }
+            /*else if(!(isGPSEnabled | isNetworkEnabled)){
+                new MakeToast("위치서비스를 활성화 해주세요").execute();
+            }*/
             // API 서버 오류로 데이터를 가져올수 없을 경우
             else{
-                //Toast.makeText(getActivity(), "해당 API 오류로 새로고침에 실패하였습니다.", Toast.LENGTH_LONG).show();//수정
+                new MakeToast("현재 해당 지역의 미세먼지 정보가 제공되지 않습니다.").execute();
             }
+        }
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    class MakeToast extends AsyncTask<View, String, String>{
+            String st;
+        MakeToast(String st) {
+            this.st = st;
+        }
+        @Override
+        protected String doInBackground(View... views) {
+            return st;
+        }
+
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            Toast.makeText(getActivity(),s,Toast.LENGTH_LONG).show();
         }
     }
 }
