@@ -26,11 +26,13 @@ public class PushPopup extends BroadcastReceiver{
     @Override
     public void onReceive(Context context, Intent intent) {
 
+        // 매 시각 파싱 기능 (미구현)
         /*Air air = new Air();
         air.getAirInfo(view);*/
 
-        /*if(!dataBase.select("Air").split("-")[3].contains("나쁨")){
-            Log.d("뭐라도","하자");
-        }*/
+        if(dataBase.select("Air").split("-")[3].contains("나쁨")){
+            Log.d("미세먼지 수치가","나쁨이상입니다");
+            // 팝업기능 삽입 필요
+        }
     }
 }

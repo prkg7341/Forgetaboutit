@@ -121,13 +121,6 @@ public class Air extends Fragment {
             airView.setText(result);
         }
 
-        /*if(Main.userLocation!=null) {
-            Main.userLocation.setText(address);
-        }
-        else{
-            Main.userLocation.setText("선택된 위치가 없습니다.");
-        }*/
-
         // 버튼 클릭시 실행 여부를 다시 확인하는 AlertDialog 생성
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
 
@@ -1086,6 +1079,8 @@ public class Air extends Fragment {
         }
     }
 
+    // 매시각 파싱하는 메소드
+    // view 인자 처리방법을 찾지 못해 미구현
     void getAirInfo(View view){
         getLocation(view);
         if(location!=null){

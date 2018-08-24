@@ -293,9 +293,9 @@ public class Setting extends Fragment {
 
         //알람시간 calendar에 set
         parsingTime.set(parsingTime.get(Calendar.YEAR), parsingTime.get(Calendar.MONTH), parsingTime.get(Calendar.DATE),
-                parsingTime.get(Calendar.HOUR), parsingTime.get(Calendar.MINUTE), parsingTime.get(Calendar.SECOND));
+                parsingTime.get(Calendar.HOUR), 5, 0);
 
         // 매 시각 5분마다 반복하도록 알람 예약
-        am.setRepeating(AlarmManager.RTC_WAKEUP, parsingTime.getTimeInMillis(), 5*1000L, sender);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, parsingTime.getTimeInMillis(), 60*60*1000L, sender);
     }
 }
